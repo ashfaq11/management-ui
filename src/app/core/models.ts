@@ -23,7 +23,7 @@ export interface Payslip {
 export interface IncentiveReport { month: string; therapists: Payslip[]; total_incentive: number; total_payroll: number; }
 export interface ServiceTotal { service: string; count: number; revenue: number; }
 export interface Summary {
-  month: string; therapist_id: number | null; revenue: number; services_count: number; new_customers: number;
+  month: string | null; from: string; to: string; therapist_id: number | null; revenue: number; services_count: number; new_customers: number;
   by_status: { status: string; count: number; amount: number }[];
   by_service: ServiceTotal[];
   /** Completed services per therapist, with a per-service breakdown. */

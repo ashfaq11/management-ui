@@ -108,8 +108,14 @@ export class Appointments implements OnInit {
   cancelEdit() { this.editId.set(null); this.f = { ...this.f, start_at: '', price: null, duration_min: null, notes: null }; }
 
   async setStatus(a: Appointment, status: Status) {
-    try { await this.api.patch(`/appointments/${a.id}/status`, { status }); }
-    catch (e) { this.say(errorText(e), true); }
+    try {
+      const result = await this.api.patch<{ plan_deduction: { plan_name: string; amount: number; unit: 'hours' | 'rupees'; remaining_balance: number } | null }>(
+        '/appointments/' + a.id + '/status', { status });
+      const d = result.plan_deduction;
+      this.say(d
+        ? 'Completed. Deducted ' + d.amount.toFixed(2) + ' ' + d.unit + ' from ' + d.plan_name + '; balance ' + d.remaining_balance.toFixed(2) + '.'
+        : status === 'completed' ? 'Appointment completed. No eligible prepaid plan was deducted.' : 'Status updated.');
+    } catch (e) { this.say(errorText(e), true); }
     await this.load();
   }
 

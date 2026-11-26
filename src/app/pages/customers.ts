@@ -2,6 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
+import { Auth } from '../core/auth';
 import { Customer } from '../core/models';
 
 type Edit = { name: string; phone: string; email: string; gender: string; dob: string; address: string; notes: string };
@@ -37,14 +38,22 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
         <h2>{{ c.name }} <button class="s" style="margin-left:8px" (click)="startEdit(c)">Edit</button></h2>
         <p>{{ c.phone }} {{ c.email }}<br>{{ c.notes }}</p>
       }
+      <h3>Available prepaid balances</h3>
+      <div class="grid" style="margin-bottom:12px">
+        <div><label>Hours available</label><h2>{{ availableBalance(c, 'hours') | number: '1.2-2' }} hrs</h2></div>
+        <div><label>Rupees available</label><h2>Rs {{ availableBalance(c, 'rupees') | number: '1.2-2' }}</h2></div>
+      </div>
       <h3>Prepaid plans</h3>
-      <div class="wrap"><table><tr><th>Plan</th><th>Unit</th><th>Purchased</th><th>Balance</th><th>Expires</th></tr>
+      <div class="wrap"><table><tr><th>Plan</th><th>Unit</th><th>Purchased</th><th>Used</th><th>Balance</th><th>Expires</th><th>Status</th></tr>
         @for (p of (c.plans ?? []); track p.id) {
           <tr><td>{{ p.name }}</td><td>{{ p.plan_type === 'hours' ? 'Hours' : 'Rupees' }}</td>
             <td>{{ p.purchased_amount | number: '1.2-2' }}</td>
-            <td><strong>{{ p.balance | number: '1.2-2' }}</strong></td><td>{{ p.expires_on || 'Never' }}</td></tr>
-        } @empty { <tr><td colspan="5">No prepaid plans yet.</td></tr> }
+            <td>{{ p.used_amount | number: '1.2-2' }}</td>
+            <td><strong>{{ p.balance | number: '1.2-2' }}</strong></td><td>{{ p.expires_on || 'Never' }}</td>
+            <td>{{ planStatus(p) }}</td></tr>
+        } @empty { <tr><td colspan="7">No prepaid plans yet.</td></tr> }
       </table></div>
+      @if (auth.isAdmin()) {
       <h4>Add plan / package</h4>
       <div class="grid">
         <div><label>Plan name *</label><input [(ngModel)]="planForm.name" placeholder="e.g. 10 hour package"></div>
@@ -57,6 +66,9 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
       <label>Plan notes</label><input [(ngModel)]="planForm.notes" placeholder="Optional package details">
       <button class="p" style="margin-top:8px" (click)="addPlan(c.id)">Add customer plan</button>
       @if (planMsg()) { <div class="msg" [class.err]="planErr()">{{ planMsg() }}</div> }
+      } @else {
+        <small>Only admins can add prepaid plans. Staff can view balances and redeem them when completing appointments.</small>
+      }
       <h3>History</h3>
       <div class="grid">
         <div><label>From</label><input type="date" [(ngModel)]="hf.from"></div>
@@ -87,6 +99,7 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
 })
 export class Customers implements OnInit {
   private api = inject(Api);
+  auth = inject(Auth);
   form: Edit | null = null; formErr = signal('');
   planForm = { name: '', plan_type: 'hours' as 'hours' | 'rupees', amount: 0, expires_on: '', notes: '' };
   planMsg = signal(''); planErr = signal(false);
@@ -107,6 +120,15 @@ export class Customers implements OnInit {
   }
   spent(rows: { status: string; price: number }[]) {
     return rows.filter((a) => a.status === 'completed').reduce((s, a) => s + Number(a.price), 0);
+  }
+  availableBalance(c: Customer, type: 'hours' | 'rupees') {
+    const today = new Date().toISOString().slice(0, 10);
+    return (c.plans ?? []).filter((p) => p.plan_type === type && Number(p.balance) > 0
+      && (!p.expires_on || p.expires_on >= today)).reduce((sum, p) => sum + Number(p.balance), 0);
+  }
+  planStatus(p: { balance: number; expires_on?: string | null }) {
+    if (p.expires_on && p.expires_on < new Date().toISOString().slice(0, 10)) return 'Expired';
+    return Number(p.balance) > 0 ? 'Available' : 'Used up';
   }
   clearHist() { this.hf = { from: '', to: '', therapist: '', service: '', status: '' }; }
   async load() {

@@ -177,7 +177,6 @@ export class Customers implements OnInit {
     try {
       if (e.mode === 'topup') {
         if (!(Number(e.amount) > 0)) { this.planErr.set(true); this.planMsg.set('Enter an amount greater than zero.'); return; }
-        if (e.plan_type === 'hours' && (e.price_paid === null || String(e.price_paid) === '')) { this.planErr.set(true); this.planMsg.set('Enter the price paid for the hours top-up.'); return; }
         await this.api.post(`/customers/${cid}/plans/${e.id}/topup`, { amount: Number(e.amount), note: e.note.trim() || null,
           price_paid: e.price_paid === null || String(e.price_paid) === '' ? null : Number(e.price_paid) });
         this.planMsg.set('Top-up added.');

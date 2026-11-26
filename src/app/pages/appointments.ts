@@ -24,9 +24,9 @@ import { today } from '../core/util';
         <div class="chips">@for (m of [30, 60, 90, 120]; track m) {<button type="button" [class.on]="f.duration_min === m" (click)="f.duration_min = m">{{ m }} min</button>}</div></div>
       <div><label>Notes</label><input [(ngModel)]="f.notes"></div>
     </div>
-    <app-when-picker [(value)]="f.start_at" [therapistId]="f.therapist_id" [durationMin]="duration()"
-      [excludeId]="editId()" />
-    <button class="p" style="margin-top:10px" (click)="save()">{{ editId() ? "Save changes" : "Book" }}</button>
+    <app-when-picker [(value)]="f.start_at" [(selectionValid)]="slotValid"
+      [therapistId]="f.therapist_id" [durationMin]="duration()" [excludeId]="editId()" />
+    <button class="p" style="margin-top:10px" [disabled]="!slotValid" (click)="save()">{{ editId() ? "Save changes" : "Book" }}</button>
     @if (editId()) { <button class="s" style="margin-left:8px" (click)="cancelEdit()">Cancel</button> }
     @if (msg()) { <div class="msg" [class.err]="isErr()">{{ msg() }}</div> }
   </div>
@@ -85,7 +85,8 @@ import { today } from '../core/util';
           <td><select [ngModel]="a.status" (ngModelChange)="setStatus(a, $event)">
             @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }</select></td>
           <td>@if (a.status === 'booked') { <button class="s" (click)="edit(a)">Edit</button> }</td></tr>
-      }</table>
+      }
+      </table>
     } @else { <p>No appointments.</p> }
     </div>
   </div>`,
@@ -97,6 +98,7 @@ export class Appointments implements OnInit {
   rows = signal<Appointment[]>([]); day = signal(today());
   msg = signal(''); isErr = signal(false);
   editId = signal<number | null>(null);
+  slotValid = false;
   pendingCompletion = signal<Appointment | null>(null);
   pendingLoading = signal(false);
   completionPlans = signal<CustomerPlan[]>([]);
@@ -127,6 +129,7 @@ export class Appointments implements OnInit {
   async save() {
     try {
       if (!this.f.start_at) throw new Error('Pick a date and a time');
+      if (!this.slotValid) throw new Error('Choose a free appointment time within the therapist\'s assigned shift.');
       const body: Record<string, unknown> = { ...this.f };
       if (body['price'] === null || body['price'] === '') delete body['price'];
       if (!body['duration_min']) delete body['duration_min'];
@@ -140,13 +143,18 @@ export class Appointments implements OnInit {
 
   edit(a: Appointment) {
     this.editId.set(a.id);
+    this.slotValid = false;
     this.f = { customer_id: a.customer_id, therapist_id: a.therapist_id, service_id: a.service_id,
       start_at: a.start_at, price: null, duration_min: a.duration_min, notes: a.notes ?? null };
     this.msg.set('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  cancelEdit() { this.editId.set(null); this.f = { ...this.f, start_at: '', price: null, duration_min: null, notes: null }; }
+  cancelEdit() {
+    this.editId.set(null);
+    this.slotValid = false;
+    this.f = { ...this.f, start_at: '', price: null, duration_min: null, notes: null };
+  }
 
   async setStatus(a: Appointment, status: Status) {
     if (status === 'completed') {

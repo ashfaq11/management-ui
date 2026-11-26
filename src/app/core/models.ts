@@ -12,9 +12,27 @@ export interface CustomerPlan {
   purchased_amount: number; balance: number; expires_on?: string | null; notes?: string | null;
   created_at: string; used_amount: number;
 }
+export type PaymentMethod = 'cash' | 'upi' | 'card' | 'bank_transfer' | 'other';
+export interface Payment {
+  id: number; appointment_id: number; customer_id: number; customer?: string; phone?: string;
+  amount: number; method: PaymentMethod; reference?: string | null; note?: string | null;
+  received_at: string; refunded_amount: number; net_amount: number;
+}
 export interface Customer {
   id: number; name: string; phone: string; email?: string; gender?: string; dob?: string;
-  address?: string; notes?: string; created_at: string; appointments?: Appointment[]; plans?: CustomerPlan[];
+  address?: string; notes?: string; preferred_payment_method?: PaymentMethod | null;
+  created_at: string; appointments?: Appointment[]; plans?: CustomerPlan[]; payments?: Payment[];
+}
+export interface CustomerPage { items: Customer[]; total: number; page: number; page_size: number; }
+export interface DashboardData {
+  date: string;
+  today: { total: number; booked: number; completed: number; cancelled: number; no_show: number; completed_value: number };
+  collections: { gross: number; refunds: number; net: number };
+  customers_today: number; total_customers: number; therapists_on_shift: number; upcoming: Appointment[];
+}
+export interface PaymentReport {
+  date: string; gross: number; refunds: number; net: number;
+  methods: { method: PaymentMethod; count: number; gross: number; refunds: number }[];
 }
 export interface Therapist {
   id: number; name: string; phone?: string; fixed_salary: number; incentive_percent: number;
@@ -35,6 +53,7 @@ export interface Appointment {
   id: number; customer_id: number; therapist_id: number; service_id: number; start_at: string;
   duration_min: number; price: number; status: Status; notes?: string;
   customer?: string; phone?: string; therapist?: string; service?: string;
+  preferred_payment_method?: PaymentMethod | null; paid_amount?: number; balance_due?: number;
   plan_name?: string | null; plan_deducted?: number | null; plan_unit?: 'hours' | 'rupees' | null;
   plan_deducted_at?: string | null; plan_reversed_at?: string | null;
 }

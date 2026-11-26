@@ -1,7 +1,7 @@
 # Spa Manager - web UI (Angular)
 
 Angular 22 standalone-components app for the `spa-backend` API: sign in, appointments, new-customer onboarding,
-customer history, therapists & services (admin), monthly reports (admin), payroll with payslip PDF download (admin).
+customer history and editing, appointment rescheduling, therapists & services with edit (admin), user accounts and password reset (admin), change-own-password, monthly reports (admin), payroll with payslip PDF download (admin).
 
 ```bash
 npm install

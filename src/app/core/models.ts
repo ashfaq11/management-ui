@@ -26,3 +26,5 @@ export interface Summary {
   by_status: { status: string; count: number; amount: number }[];
   by_service: { service: string; count: number; revenue: number }[];
 }
+
+export interface User { id: number; username: string; role: 'admin' | 'staff'; is_active: number; }

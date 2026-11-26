@@ -17,8 +17,9 @@ import { Auth } from '../core/auth';
       <a routerLink="/staff" routerLinkActive="on">Therapists &amp; services</a>
       <a routerLink="/reports" routerLinkActive="on">Reports</a>
       <a routerLink="/payroll" routerLinkActive="on">Payroll</a>
+      <a routerLink="/users" routerLinkActive="on">Users</a>
     }
-    <span class="sp"></span><span>{{ auth.me()?.username }} ({{ auth.me()?.role }})</span>
+    <span class="sp"></span><a routerLink="/account" routerLinkActive="on">{{ auth.me()?.username }} ({{ auth.me()?.role }})</a>
     <button class="s" (click)="auth.logout()">Logout</button>
   </header>
   <main><router-outlet /></main>`,

@@ -92,7 +92,8 @@ interface ShiftReport {
         <div class="steps">
           <div class="step"><span>Service revenue</span><b>{{ inr(s.revenue) }}</b></div>
           <div class="step minus"><span>&minus; Paid from plans</span><b>{{ inr(-(s.paid_by_plan ?? 0)) }}</b></div>
-          <div class="step plus"><span>+ Plan sales</span><b>{{ inr(s.plan_sales ?? 0) }}</b></div>
+          <div class="step plus"><span>+ Plan sales</span><b>{{ inr(s.plan_sales ?? 0) }}</b>
+            @if (s.plan_dues) { <small style="color:var(--gold)">{{ inr(s.plan_dues) }} pending ({{ s.plan_dues_count }})</small> }</div>
           <div class="step sum"><span>= Money collected</span><b>{{ inr(s.collected) }}</b></div>
           @if (s.profit != null) { <div class="step minus"><span>&minus; Payroll</span><b>{{ inr(-(s.payroll ?? 0)) }}</b></div> }
           <div class="step minus"><span>&minus; Expenses</span><b>{{ inr(-(s.expenses ?? 0)) }}</b></div>

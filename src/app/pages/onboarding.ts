@@ -45,6 +45,7 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
         <div><label>Plan cost (Rs, optional)</label>
           <input type="number" min="0" step="1" [(ngModel)]="plan.price_paid" [placeholder]="plan.plan_type === 'rupees' ? 'same as amount' : 'e.g. 9000 for 10 hrs'"></div>
         <div><label>Expiry date (optional)</label><input type="date" [(ngModel)]="plan.expires_on"></div>
+        <div style="flex:0 0 auto"><label>Payment</label><select [(ngModel)]="plan.paid"><option [ngValue]="true">Paid now</option><option [ngValue]="false">Pending (pay later)</option></select></div>
       </div>
       <label>Plan notes</label><input [(ngModel)]="plan.notes" placeholder="Optional package details">
       <small>Hours and rupees are separate balances. The selected balance type is what staff can redeem later.</small>
@@ -81,8 +82,8 @@ export class Onboarding implements OnInit {
   c = blank(); therapist_id?: number; service_id?: number; start_at = ''; duration_min: number | null = null;
   includePlan = false;
   preferredPaymentMethod: PaymentMethod | '' = '';
-  plan: { name: string; plan_type: 'hours' | 'rupees'; amount: number | null; price_paid: number | null; expires_on: string; notes: string } =
-    { name: '', plan_type: 'hours', amount: null, price_paid: null, expires_on: '', notes: '' };
+  plan: { name: string; plan_type: 'hours' | 'rupees'; amount: number | null; price_paid: number | null; paid: boolean; expires_on: string; notes: string } =
+    { name: '', plan_type: 'hours', amount: null, price_paid: null, paid: true, expires_on: '', notes: '' };
 
   async ngOnInit() {
     const [t, s] = await Promise.all([this.api.get<Therapist[]>('/therapists'), this.api.get<Service[]>('/services')]);
@@ -100,7 +101,7 @@ export class Onboarding implements OnInit {
     this.service_id = undefined;
     this.includePlan = false;
     this.preferredPaymentMethod = '';
-    this.plan = { name: '', plan_type: 'hours', amount: null, price_paid: null, expires_on: '', notes: '' };
+    this.plan = { name: '', plan_type: 'hours', amount: null, price_paid: null, paid: true, expires_on: '', notes: '' };
   }
 
   async save() {
@@ -124,6 +125,7 @@ export class Onboarding implements OnInit {
       name: this.plan.name.trim(), plan_type: this.plan.plan_type, amount: Number(this.plan.amount),
       expires_on: this.plan.expires_on || null, notes: this.plan.notes.trim() || null,
       price_paid: this.plan.price_paid === null || String(this.plan.price_paid) === '' ? null : Number(this.plan.price_paid),
+      paid: this.plan.paid,
     };
     if (this.therapist_id || this.service_id || this.start_at) {
       if (!this.therapist_id || !this.service_id || !this.start_at) {

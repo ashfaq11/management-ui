@@ -7,9 +7,14 @@ export interface Spa {
   id: number; name: string; is_active: boolean; created_at: string; admins: number; staff: number; customers: number;
   revenue_this_month: number;
 }
+export interface CustomerPlan {
+  id: number; customer_id: number; name: string; plan_type: 'hours' | 'rupees';
+  purchased_amount: number; balance: number; expires_on?: string | null; notes?: string | null;
+  created_at: string; used_amount: number;
+}
 export interface Customer {
   id: number; name: string; phone: string; email?: string; gender?: string; dob?: string;
-  address?: string; notes?: string; created_at: string; appointments?: Appointment[];
+  address?: string; notes?: string; created_at: string; appointments?: Appointment[]; plans?: CustomerPlan[];
 }
 export interface Therapist {
   id: number; name: string; phone?: string; fixed_salary: number; incentive_percent: number;
@@ -23,6 +28,7 @@ export interface Appointment {
   id: number; customer_id: number; therapist_id: number; service_id: number; start_at: string;
   duration_min: number; price: number; status: Status; notes?: string;
   customer?: string; phone?: string; therapist?: string; service?: string;
+  plan_name?: string | null; plan_deducted?: number | null; plan_unit?: 'hours' | 'rupees' | null;
 }
 export interface Payslip {
   therapist_id: number; therapist: string; month: string; fixed_salary: number; services_count: number;

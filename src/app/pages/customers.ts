@@ -167,17 +167,17 @@ export class Customers implements OnInit {
   form: Edit | null = null; formErr = signal('');
   planForm = { name: '', plan_type: 'hours' as 'hours' | 'rupees', amount: 0, price_paid: null as number | null, expires_on: '', notes: '' };
   planMsg = signal(''); planErr = signal(false);
-  planEdit: { id: number; mode: 'edit' | 'topup'; name: string; expires_on: string; notes: string; amount: number | null; price_paid: number | null; note: string } | null = null;
-  startPlan(p: { id: number; name: string; expires_on?: string | null; notes?: string | null }, mode: 'edit' | 'topup') {
+  planEdit: { id: number; mode: 'edit' | 'topup'; plan_type: 'hours' | 'rupees'; name: string; expires_on: string; notes: string; amount: number | null; price_paid: number | null; note: string } | null = null;
+  startPlan(p: { id: number; name: string; plan_type: 'hours' | 'rupees'; expires_on?: string | null; notes?: string | null }, mode: 'edit' | 'topup') {
     this.planMsg.set('');
-    this.planEdit = { id: p.id, mode, name: p.name, expires_on: p.expires_on ?? '', notes: p.notes ?? '', amount: null, price_paid: null, note: '' };
+    this.planEdit = { id: p.id, mode, plan_type: p.plan_type, name: p.name, expires_on: p.expires_on ?? '', notes: p.notes ?? '', amount: null, price_paid: null, note: '' };
   }
   async savePlan(cid: number) {
     const e = this.planEdit!;
     try {
       if (e.mode === 'topup') {
         if (!(Number(e.amount) > 0)) { this.planErr.set(true); this.planMsg.set('Enter an amount greater than zero.'); return; }
-        if (p.plan_type === 'hours' && (e.price_paid === null || String(e.price_paid) === '')) { this.planErr.set(true); this.planMsg.set('Enter the price paid for the hours top-up.'); return; }
+        if (e.plan_type === 'hours' && (e.price_paid === null || String(e.price_paid) === '')) { this.planErr.set(true); this.planMsg.set('Enter the price paid for the hours top-up.'); return; }
         await this.api.post(`/customers/${cid}/plans/${e.id}/topup`, { amount: Number(e.amount), note: e.note.trim() || null,
           price_paid: e.price_paid === null || String(e.price_paid) === '' ? null : Number(e.price_paid) });
         this.planMsg.set('Top-up added.');

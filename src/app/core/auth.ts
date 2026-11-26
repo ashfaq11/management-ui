@@ -12,6 +12,7 @@ export class Auth {
   private router = inject(Router);
   readonly token = signal<string | null>(this.read());
   readonly me = signal<Me | null>(null);
+  readonly spaLogo = signal<string | null>(null);
   readonly isSuper = computed(() => this.me()?.role === 'superadmin');
   readonly isAdmin = computed(() => this.me()?.role === 'admin' || this.isSuper());
   /** The spa a superadmin is working in (sent as X-Spa-Id); admins and staff always work in their own. */

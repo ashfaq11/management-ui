@@ -234,7 +234,7 @@ export class WhenPicker {
   }
 
   private timeWindow(): { start: number; end: number } | null {
-    if (!this.shiftReady() || this.shiftLookupFailed() || this.appointmentLookupFailed()) return null;
+    if (!this.therapistId() || !this.shiftReady() || this.shiftLookupFailed() || this.appointmentLookupFailed()) return null;
     if (this.rosterConfigured() && !this.dayShift()) return null;
     const sh = this.dayShift();
     return sh
@@ -243,7 +243,7 @@ export class WhenPicker {
   }
 
   private invalidReason(value: string): string {
-    if (!/^\\d{2}:\\d{2}$/.test(value)) return 'Choose a valid start time.';
+    if (!/^\d{2}:\d{2}$/.test(value)) return 'Choose a valid start time.';
     if (!this.shiftReady() || this.loading()) return 'Wait for the shift and availability check to finish.';
     if (this.shiftLookupFailed()) return 'The therapist shift could not be verified. Retry the availability check.';
     if (this.appointmentLookupFailed()) return 'Existing appointments could not be checked. Retry the availability check.';

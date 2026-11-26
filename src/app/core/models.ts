@@ -17,7 +17,7 @@ export interface Payment {
   id: number; payment_id?: number; event_type?: 'payment' | 'refund';
   appointment_id: number; customer_id: number; customer?: string; phone?: string;
   amount: number; method: PaymentMethod; reference?: string | null; note?: string | null;
-  received_at: string; refunded_amount: number; net_amount: number;
+  received_at: string; start_at: string; refunded_amount: number; net_amount: number;
 }
 export interface Customer {
   id: number; name: string; phone: string; email?: string; gender?: string; dob?: string;

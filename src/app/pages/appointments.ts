@@ -295,18 +295,28 @@ export class Appointments implements OnInit {
       this.paymentError.set('Enter an amount greater than zero and no more than the outstanding balance.'); return;
     }
     this.savingPayment.set(true);
+    let result: {id:number;receipt_number:string;balance_due:number};
     try {
-      const result=await this.api.post<{id:number;receipt_number:string;balance_due:number}>(
+      result=await this.api.post<{id:number;receipt_number:string;balance_due:number}>(
         '/appointments/'+a.id+'/payments',
         {amount:Number(this.paymentAmount),method:this.paymentMethod,reference:this.paymentReference.trim()||null,note:this.paymentNote.trim()||null});
       this.say('Payment recorded · '+result.receipt_number+' · remaining due ₹'+result.balance_due.toFixed(2));
-      await this.api.blob('/payments/'+result.id+'/receipt').then(blob=>{
-        const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url;
-        link.download='receipt_'+result.receipt_number+'.pdf'; link.click(); URL.revokeObjectURL(url);
-      });
-      this.collecting.set(null); await this.load();
-    } catch(e) { this.paymentError.set(errorText(e)); }
-    finally { this.savingPayment.set(false); }
+      this.collecting.set(null);
+      await this.load();
+    } catch(e) {
+      this.paymentError.set(errorText(e));
+      this.savingPayment.set(false);
+      return;
+    }
+    this.savingPayment.set(false);
+    try {
+      const blob=await this.api.blob('/payments/'+result.id+'/receipt');
+      const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url;
+      link.download='receipt_'+result.receipt_number+'.pdf'; link.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    } catch(e) {
+      this.say('Payment saved successfully. Receipt download failed; open Payments to download it again.',true);
+    }
   }
 
   async save() {

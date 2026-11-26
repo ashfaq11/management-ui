@@ -16,6 +16,13 @@ Read at start-up, so the same build runs anywhere. `apiBase` is `/api` by defaul
 `https://...` URL of the API. When the API is on another origin, add this site's address to the API's `SPA_CORS_ORIGINS`.
 Plain `http://` is only honoured for `localhost`, so a mistyped config can never send logins over the open internet.
 
+## Deploy free on Vercel (current)
+`vercel.json` holds everything: build `npm run build`, output `dist/spa-ui/browser`, every unknown path answered with
+`index.html`, the security headers, and **`/api/*` forwarded to the backend** (`https://spa.13.205.155.148.sslip.io/api`) -- so
+the browser only ever talks to this site, `config.json` stays at `/api`, and the API needs no CORS entry.
+Vercel -> Add New -> Project -> import `management-ui` -> Deploy (no settings to change). Every push to `main` redeploys.
+To move the API, change the `/api/:path*` destination in `vercel.json`.
+
 ## Deploy free on Cloudflare Pages
 1. Cloudflare dashboard -> Workers & Pages -> Create -> Pages -> **Connect to Git** -> `management-ui`.
 2. Build command `npm ci && npm run build`, output directory `dist/spa-ui/browser`, environment variable `NODE_VERSION` = `22`.

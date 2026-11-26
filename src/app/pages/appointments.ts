@@ -21,6 +21,9 @@ import { today } from '../core/util';
     .cal-cell.muted{opacity:.48}
     .cal-date{font-weight:750;font-size:12px;display:flex;justify-content:space-between;gap:3px}
     .cal-item{display:block;font-size:10px;line-height:1.3;margin-top:5px;padding:3px 5px;border-radius:5px;background:var(--acc-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .pay-state{display:inline-flex;align-items:center;border-radius:99px;padding:3px 8px;font-size:11px;font-weight:700;white-space:nowrap}
+    .pay-pending{background:#fff1df;color:#8a4b0a}.pay-partial{background:#fff8ce;color:#725a00}
+    .pay-paid{background:#e3f5e9;color:#17643b}.pay-prepaid{background:#e9e6ff;color:#5141a0}
     .cal-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
     .cal-week>section{min-width:0;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--card)}
     .cal-week h4{font-size:12px;margin:0 0 8px;color:var(--mut)}
@@ -152,11 +155,14 @@ import { today } from '../core/util';
     } @else {
       <div class="wrap">
         @if (rows().length) {
-          <table><tr><th>Time</th><th>Customer</th><th>Therapist</th><th>Service</th><th class="num">Price</th><th class="num">Paid</th><th class="num">Due</th><th>Status</th><th>Actions</th></tr>
+          <table><tr><th>Time</th><th>Customer</th><th>Therapist</th><th>Service</th><th class="num">Price</th><th class="num">Paid</th><th class="num">Due</th><th>Payment status</th><th>Appointment status</th><th>Actions</th></tr>
           @for (a of rows(); track a.id) {
             <tr><td>{{ a.start_at.slice(11,16) }}</td><td>{{ a.customer }}<br><small>{{ a.phone }}</small></td>
               <td>{{ a.therapist }}</td><td>{{ a.service }}</td><td class="num">{{ a.price | number:'1.2-2' }}</td>
               <td class="num">{{ a.paid_amount || 0 | number:'1.2-2' }}</td><td class="num"><strong>{{ a.balance_due || 0 | number:'1.2-2' }}</strong></td>
+              <td><span class="pay-state" [class.pay-pending]="paymentState(a)==='pending'"
+                [class.pay-partial]="paymentState(a)==='partial'" [class.pay-paid]="paymentState(a)==='paid'"
+                [class.pay-prepaid]="paymentState(a)==='prepaid'">{{ paymentLabel(a) }}</span></td>
               <td><select [ngModel]="a.status" (ngModelChange)="setStatus(a, $event)">
                 @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }</select></td>
               <td style="white-space:nowrap">
@@ -258,6 +264,19 @@ export class Appointments implements OnInit {
     if(this.calendarMode()==='month') d.setMonth(d.getMonth()+delta,1);
     else d.setDate(d.getDate()+delta*(this.calendarMode()==='week'?7:1));
     this.day.set(d.toISOString().slice(0,10)); await this.load();
+  }
+
+  paymentState(a:Appointment): 'pending'|'partial'|'paid'|'prepaid' {
+    if (a.payment_status) return a.payment_status;
+    if (a.plan_unit) return 'prepaid';
+    if (Number(a.balance_due ?? 0) <= 0 && Number(a.paid_amount ?? 0) > 0) return 'paid';
+    if (Number(a.paid_amount ?? 0) > 0) return 'partial';
+    return 'pending';
+  }
+  paymentLabel(a:Appointment) {
+    const state=this.paymentState(a);
+    if(state==='prepaid') return a.plan_unit ? 'Plan · '+(a.plan_unit==='hours'?'Hours':'Rupees') : 'Plan redeemed';
+    return ({pending:'Pending',partial:'Partially paid',paid:'Paid'} as Record<string,string>)[state];
   }
 
   startPayment(a:Appointment) {

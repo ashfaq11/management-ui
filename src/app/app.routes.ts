@@ -7,7 +7,9 @@ export const routes: Routes = [
     path: '', canActivate: [authGuard],
     loadComponent: () => import('./pages/shell').then((m) => m.Shell),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'appointments' },
+      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      { path: 'dashboard', canActivate: [spaGuard], loadComponent: () => import('./pages/dashboard').then((m) => m.Dashboard) },
+      { path: 'payments', canActivate: [spaGuard], loadComponent: () => import('./pages/payments').then((m) => m.Payments) },
       { path: 'appointments', canActivate: [spaGuard], loadComponent: () => import('./pages/appointments').then((m) => m.Appointments) },
       { path: 'onboarding', canActivate: [spaGuard], loadComponent: () => import('./pages/onboarding').then((m) => m.Onboarding) },
       { path: 'customers', canActivate: [spaGuard], loadComponent: () => import('./pages/customers').then((m) => m.Customers) },

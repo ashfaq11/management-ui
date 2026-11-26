@@ -131,9 +131,9 @@ export class Customers implements OnInit {
     return isNaN(+d) ? v : d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
   }
   availableBalance(c: Customer, type: 'hours' | 'rupees') {
-    const today = today();
+    const currentDate = today();
     return (c.plans ?? []).filter((p) => p.plan_type === type && Number(p.balance) > 0
-      && (!p.expires_on || p.expires_on >= today)).reduce((sum, p) => sum + Number(p.balance), 0);
+      && (!p.expires_on || p.expires_on >= currentDate)).reduce((sum, p) => sum + Number(p.balance), 0);
   }
   planStatus(p: { balance: number; expires_on?: string | null }) {
     if (p.expires_on && p.expires_on < today()) return 'Expired';

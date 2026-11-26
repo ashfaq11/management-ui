@@ -45,14 +45,36 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
         <div><label>Rupees available</label><h2>Rs {{ availableBalance(c, 'rupees') | number: '1.2-2' }}</h2></div>
       </div>
       <h3>Prepaid plans</h3>
-      <div class="wrap"><table><tr><th>Plan</th><th>Unit</th><th>Purchased</th><th>Used</th><th>Balance</th><th>Expires</th><th>Status</th></tr>
+      <div class="wrap"><table><tr><th>Plan</th><th>Unit</th><th>Purchased</th><th>Used</th><th>Balance</th><th>Expires</th><th>Status</th>@if (auth.isAdmin()) {<th></th>}</tr>
         @for (p of (c.plans ?? []); track p.id) {
           <tr><td>{{ p.name }}</td><td>{{ p.plan_type === 'hours' ? 'Hours' : 'Rupees' }}</td>
             <td>{{ p.purchased_amount | number: '1.2-2' }}</td>
             <td>{{ p.used_amount | number: '1.2-2' }}</td>
             <td><strong>{{ p.balance | number: '1.2-2' }}</strong></td><td>{{ p.expires_on || 'Never' }}</td>
-            <td>{{ planStatus(p) }}</td></tr>
-        } @empty { <tr><td colspan="7">No prepaid plans yet.</td></tr> }
+            <td>{{ planStatus(p) }}</td>
+            @if (auth.isAdmin()) { <td style="white-space:nowrap"><button class="s" (click)="startPlan(p, 'topup')">Top up</button>
+              <button class="s" (click)="startPlan(p, 'edit')">Edit</button></td> }</tr>
+          @if (planEdit?.id === p.id) {
+            <tr class="detail"><td colspan="8">
+              @if (planEdit!.mode === 'topup') {
+                <div class="row">
+                  <div><label>Add {{ p.plan_type === 'hours' ? 'hours' : 'rupees' }} to "{{ p.name }}"</label>
+                    <input type="number" min="0.01" step="0.01" [(ngModel)]="planEdit!.amount"></div>
+                  <div><label>Note (optional)</label><input [(ngModel)]="planEdit!.note" placeholder="e.g. paid by UPI"></div>
+                </div>
+                <small>New balance: {{ (+p.balance + +(planEdit!.amount || 0)) | number: '1.2-2' }}</small>
+              } @else {
+                <div class="row">
+                  <div><label>Plan name</label><input [(ngModel)]="planEdit!.name"></div>
+                  <div><label>Expiry date (blank = never)</label><input type="date" [(ngModel)]="planEdit!.expires_on"></div>
+                  <div><label>Notes</label><input [(ngModel)]="planEdit!.notes"></div>
+                </div>
+              }
+              <button class="p" (click)="savePlan(c.id)">{{ planEdit!.mode === 'topup' ? 'Add top-up' : 'Save plan' }}</button>
+              <button class="s" style="margin-left:8px" (click)="planEdit = null">Cancel</button>
+            </td></tr>
+          }
+        } @empty { <tr><td colspan="8">No prepaid plans yet.</td></tr> }
       </table></div>
       @if (auth.isAdmin()) {
       <h4>Add plan / package</h4>
@@ -108,6 +130,25 @@ export class Customers implements OnInit {
   form: Edit | null = null; formErr = signal('');
   planForm = { name: '', plan_type: 'hours' as 'hours' | 'rupees', amount: 0, expires_on: '', notes: '' };
   planMsg = signal(''); planErr = signal(false);
+  planEdit: { id: number; mode: 'edit' | 'topup'; name: string; expires_on: string; notes: string; amount: number | null; note: string } | null = null;
+  startPlan(p: { id: number; name: string; expires_on?: string | null; notes?: string | null }, mode: 'edit' | 'topup') {
+    this.planMsg.set('');
+    this.planEdit = { id: p.id, mode, name: p.name, expires_on: p.expires_on ?? '', notes: p.notes ?? '', amount: null, note: '' };
+  }
+  async savePlan(cid: number) {
+    const e = this.planEdit!;
+    try {
+      if (e.mode === 'topup') {
+        if (!(Number(e.amount) > 0)) { this.planErr.set(true); this.planMsg.set('Enter an amount greater than zero.'); return; }
+        await this.api.post(`/customers/${cid}/plans/${e.id}/topup`, { amount: Number(e.amount), note: e.note.trim() || null });
+        this.planMsg.set('Top-up added.');
+      } else {
+        await this.api.put(`/customers/${cid}/plans/${e.id}`, { name: e.name.trim(), expires_on: e.expires_on || null, notes: e.notes.trim() || null });
+        this.planMsg.set('Plan updated.');
+      }
+      this.planErr.set(false); this.planEdit = null; await this.open(cid);
+    } catch (x) { this.planErr.set(true); this.planMsg.set(errorText(x)); }
+  }
   q = ''; list = signal<Customer[]>([]); sel = signal<Customer | null>(null); err = signal('');
   hf = { from: '', to: '', therapist: '', service: '', status: '' };
   ngOnInit() { return this.load(); }

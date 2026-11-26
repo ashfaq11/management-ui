@@ -17,7 +17,7 @@ interface PlanRedemption {
 interface PlanReport {
   from: string; to: string;
   summary: {
-    plans_added: number; sold_hours: number; sold_rupees: number; available_hours: number; available_rupees: number;
+    plans_added: number; topups: number; topped_up_hours: number; topped_up_rupees: number; sold_hours: number; sold_rupees: number; available_hours: number; available_rupees: number;
     deducted_hours: number; deducted_rupees: number; reversed_hours: number; reversed_rupees: number; redemptions: number;
   };
   plans: PrepaidPlan[];
@@ -124,7 +124,8 @@ interface ShiftReport {
         <small>Reversed: {{ p.summary.reversed_hours | number: '1.2-2' }} hrs</small></div>
       <div><label>Rupees deducted in period</label><h2>Rs {{ p.summary.deducted_rupees | number: '1.2-2' }}</h2>
         <small>Reversed: Rs {{ p.summary.reversed_rupees | number: '1.2-2' }}</small></div>
-      <div><label>Plans added</label><h2>{{ p.summary.plans_added }}</h2></div>
+      <div><label>Plans added</label><h2>{{ p.summary.plans_added }}</h2>
+        <small>Top-ups: {{ p.summary.topups }} · {{ p.summary.topped_up_hours | number: '1.0-2' }} hrs · Rs {{ p.summary.topped_up_rupees | number: '1.0-2' }}</small></div>
       <div><label>Redemption records</label><h2>{{ p.summary.redemptions }}</h2></div>
     </div>
 

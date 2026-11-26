@@ -1,7 +1,7 @@
 import { Component, effect, inject, input, model, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api } from '../core/api';
-import { Appointment } from '../core/models';
+import { Appointment, ShiftAssignment } from '../core/models';
 import { today } from '../core/util';
 
 /** Opening hours used for the suggested slots; any other time can still be typed in the time box. */
@@ -20,6 +20,7 @@ const mins = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
  */
 @Component({
   selector: 'app-when-picker', imports: [FormsModule],
+  styles: [`.shift-note{display:block;color:var(--mut);font-size:12px;margin-top:5px;line-height:1.4}`],
   template: `
   <label>Date</label>
   <div style="display:flex;gap:4px">
@@ -30,7 +31,16 @@ const mins = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
   <label style="margin-top:8px">Time</label>
   <input type="time" step="900" [ngModel]="time()" (ngModelChange)="setTime($event)">
   @if (therapistId() && date()) {
-    <label style="margin-top:8px">Free times for this therapist @if (loading()) { (checking...) }</label>
+    @if (rosterConfigured()) {
+      @if (dayShift(); as sh) {
+        <small class="shift-note">Assigned shift: {{ sh.shift_name }} · {{ sh.start_time.slice(0,5) }}–{{ sh.end_time.slice(0,5) }}</small>
+      } @else {
+        <small class="shift-note">This therapist has no active shift assigned for this weekday. Choose another day or ask an admin to update the roster.</small>
+      }
+    } @else {
+      <small class="shift-note">No weekly roster set for this therapist. Default booking window: 09:00–21:00.</small>
+    }
+    <label style="margin-top:8px">Available times @if (loading()) { (checking...) }</label>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
       @for (s of slots(); track s.t) {
         <button type="button" class="s" [disabled]="!s.free" (click)="setTime(s.t)"
@@ -57,6 +67,8 @@ export class WhenPicker {
   minDate = signal(today());
   slots = signal<{ t: string; free: boolean }[]>([]);
   loading = signal(false);
+  rosterConfigured = signal(false);
+  dayShift = signal<ShiftAssignment | null>(null);
   private busy: { from: number; to: number }[] = [];
 
   constructor() {
@@ -82,13 +94,23 @@ export class WhenPicker {
   private emit() { this.value.set(this.date() && this.time() ? `${this.date()}T${this.time()}` : ''); }
 
   private async fetch(date: string, therapist: number | undefined, exclude: number | null) {
-    if (!date || !therapist) { this.busy = []; this.build(); return; }
+    if (!date || !therapist) {
+      this.busy = []; this.rosterConfigured.set(false); this.dayShift.set(null); this.build(); return;
+    }
     this.loading.set(true);
     try {
-      const rows = await this.api.get<Appointment[]>('/appointments', { date, therapist_id: therapist });
+      const [rows, assignments] = await Promise.all([
+        this.api.get<Appointment[]>('/appointments', { date, therapist_id: therapist }),
+        this.api.get<ShiftAssignment[]>('/shift-assignments', { therapist_id: therapist }),
+      ]);
       this.busy = rows.filter((a) => (a.status === 'booked' || a.status === 'completed') && a.id !== exclude)
         .map((a) => { const from = mins(a.start_at.slice(11, 16)); return { from, to: from + a.duration_min }; });
-    } catch { this.busy = []; }
+      this.rosterConfigured.set(assignments.length > 0);
+      const weekday = (new Date(date + 'T12:00:00').getDay() + 6) % 7;
+      this.dayShift.set(assignments.find((a) => a.day_of_week === weekday && a.shift_is_active) ?? null);
+    } catch {
+      this.busy = []; this.rosterConfigured.set(false); this.dayShift.set(null);
+    }
     this.loading.set(false);
     this.build();
   }
@@ -97,8 +119,12 @@ export class WhenPicker {
     const len = this.durationMin() || 60;
     const now = new Date();
     const past = this.date() === today() ? now.getHours() * 60 + now.getMinutes() : -1;
+    const shift = this.dayShift();
+    if (this.rosterConfigured() && !shift) { this.slots.set([]); return; }
+    const open = shift ? mins(shift.start_time.slice(0,5)) : OPEN;
+    const close = shift ? mins(shift.end_time.slice(0,5)) : CLOSE;
     const out: { t: string; free: boolean }[] = [];
-    for (let m = OPEN; m + len <= CLOSE; m += STEP) {
+    for (let m = open; m + len <= close; m += STEP) {
       if (m < past) continue;
       out.push({ t: hhmm(m), free: !this.busy.some((b) => m < b.to && b.from < m + len) });
     }

@@ -98,7 +98,7 @@ import { today } from '../core/util';
         <button class="s" (click)="cancelPayment()">Close</button></div>
       <p>{{ a.customer }} · {{ a.service }} · Outstanding ₹{{ a.balance_due | number:'1.2-2' }}</p>
       <div class="collection">
-        <div><label>Amount received (INR)</label><input type="number" min="0.01" step="0.01" [max]="a.balance_due" [(ngModel)]="paymentAmount"></div>
+        <div><label>Amount received (INR)</label><input type="number" min="0.01" step="0.01" [max]="a.balance_due ?? 0" [(ngModel)]="paymentAmount"></div>
         <div><label>Payment method</label><select [(ngModel)]="paymentMethod">
           <option value="cash">Cash</option><option value="upi">UPI</option><option value="card">Card</option>
           <option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select></div>

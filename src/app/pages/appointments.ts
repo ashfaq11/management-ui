@@ -2,12 +2,35 @@ import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
-import { Appointment, Customer, CustomerPlan, STATUSES, Service, Status, Therapist } from '../core/models';
+import { Appointment, Customer, CustomerPlan, PaymentMethod, STATUSES, Service, Status, Therapist } from '../core/models';
 import { WhenPicker } from '../shared/when-picker';
 import { today } from '../core/util';
 
 @Component({
   selector: 'app-appointments', imports: [FormsModule, DecimalPipe, WhenPicker],
+  styles: [`
+    .cal-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .cal-toolbar .spacer{flex:1}
+    .mode-switch{display:flex;gap:4px;background:var(--bg);padding:4px;border-radius:10px}
+    .mode-switch button{border:0;background:transparent;border-radius:8px;padding:7px 12px;color:var(--mut)}
+    .mode-switch button.active{background:var(--card);color:var(--acc);font-weight:700;box-shadow:var(--shadow)}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+    .cal-cell{min-width:0;min-height:105px;padding:7px;border:1px solid var(--line);border-radius:10px;background:var(--card);cursor:pointer}
+    .cal-cell.today{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+    .cal-cell.selected{background:var(--acc-soft)}
+    .cal-cell.muted{opacity:.48}
+    .cal-date{font-weight:750;font-size:12px;display:flex;justify-content:space-between;gap:3px}
+    .cal-item{display:block;font-size:10px;line-height:1.3;margin-top:5px;padding:3px 5px;border-radius:5px;background:var(--acc-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .pay-state{display:inline-flex;align-items:center;border-radius:99px;padding:3px 8px;font-size:11px;font-weight:700;white-space:nowrap}
+    .pay-pending{background:#fff1df;color:#8a4b0a}.pay-partial{background:#fff8ce;color:#725a00}
+    .pay-paid{background:#e3f5e9;color:#17643b}.pay-prepaid{background:#e9e6ff;color:#5141a0}
+    .cal-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+    .cal-week>section{min-width:0;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--card)}
+    .cal-week h4{font-size:12px;margin:0 0 8px;color:var(--mut)}
+    .cal-week .cal-item{font-size:11px;white-space:normal}
+    .collection{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end}
+    @media(max-width:760px){.cal-cell{min-height:74px;padding:4px}.cal-item{font-size:9px}.cal-week{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  `],
   template: `
   <div class="card"><h2>{{ editId() ? "Edit appointment #" + editId() : "Book appointment" }}</h2>
     <div class="grid">
@@ -45,7 +68,7 @@ import { today } from '../core/util';
             @for (p of plansByType('hours'); track p.id) {
               <small>{{ p.name }}: {{ p.balance | number: '1.2-2' }} hrs</small><br>
             }
-            <button class="p" [disabled]="!canDeduct('hours', pending)" (click)="completeWith('hours')">Deduct hours</button>
+            <button class="p" [disabled]="!canDeduct('hours', pending) || (pending.paid_amount ?? 0) > 0" (click)="completeWith('hours')">Deduct hours</button>
             @if (!canDeduct('hours', pending)) { <small>No single active hours plan has enough balance.</small> }
           </div>
           <div>
@@ -55,10 +78,11 @@ import { today } from '../core/util';
             @for (p of plansByType('rupees'); track p.id) {
               <small>{{ p.name }}: Rs {{ p.balance | number: '1.2-2' }}</small><br>
             }
-            <button class="p" [disabled]="!canDeduct('rupees', pending)" (click)="completeWith('rupees')">Deduct rupees</button>
+            <button class="p" [disabled]="!canDeduct('rupees', pending) || (pending.paid_amount ?? 0) > 0" (click)="completeWith('rupees')">Deduct rupees</button>
             @if (!canDeduct('rupees', pending)) { <small>No single active rupees plan has enough balance.</small> }
           </div>
         </div>
+        @if ((pending.paid_amount ?? 0) > 0) { <small class="shift-warn">A payment has already been recorded for this appointment. Refund it before using a prepaid plan.</small> }
         <small>The oldest eligible plan with enough balance will be used. Balances are not mixed between hours and rupees.</small>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
           <button class="s" (click)="completeWith(null)">Complete without plan deduction</button>
@@ -68,27 +92,96 @@ import { today } from '../core/util';
       @if (msg()) { <div class="msg" [class.err]="isErr()">{{ msg() }}</div> }
     </div>
   }
-  <div class="card">
-    <div class="row"><div><label>Day</label>
-      <div style="display:flex;gap:4px">
-        <button class="s" (click)="moveDay(-1)" aria-label="Previous day">&lsaquo;</button>
-        <input type="date" [ngModel]="day()" (ngModelChange)="day.set($event); load()" style="flex:1">
-        <button class="s" (click)="moveDay(1)" aria-label="Next day">&rsaquo;</button>
-        <button class="s" (click)="day.set(todayStr()); load()">Today</button>
-      </div></div></div>
-    <div class="wrap">
-    @if (rows().length) {
-      <table><tr><th>Time</th><th>Customer</th><th>Therapist</th><th>Service</th><th class="num">Price</th><th>Status</th><th></th></tr>
-      @for (a of rows(); track a.id) {
-        <tr><td>{{ a.start_at.slice(11, 16) }}</td><td>{{ a.customer }}<br><small>{{ a.phone }}</small></td>
-          <td>{{ a.therapist }}</td><td>{{ a.service }}</td><td class="num">{{ a.price | number: '1.2-2' }}</td>
-          <td><select [ngModel]="a.status" (ngModelChange)="setStatus(a, $event)">
-            @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }</select></td>
-          <td>@if (a.status === 'booked') { <button class="s" (click)="edit(a)">Edit</button> }</td></tr>
-      }
-      </table>
-    } @else { <p>No appointments.</p> }
+  @if (collecting(); as a) {
+    <div class="card">
+      <div class="row" style="justify-content:space-between;align-items:center"><h2>Collect payment · Appointment #{{ a.id }}</h2>
+        <button class="s" (click)="cancelPayment()">Close</button></div>
+      <p>{{ a.customer }} · {{ a.service }} · Outstanding ₹{{ a.balance_due | number:'1.2-2' }}</p>
+      <div class="collection">
+        <div><label>Amount received (INR)</label><input type="number" min="0.01" step="0.01" [max]="a.balance_due ?? 0" [(ngModel)]="paymentAmount"></div>
+        <div><label>Payment method</label><select [(ngModel)]="paymentMethod">
+          <option value="cash">Cash</option><option value="upi">UPI</option><option value="card">Card</option>
+          <option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select></div>
+        <div><label>Transaction reference (optional)</label><input [(ngModel)]="paymentReference" maxlength="120"></div>
+        <div><label>Note (optional)</label><input [(ngModel)]="paymentNote" maxlength="500"></div>
+      </div>
+      <button class="p" [disabled]="!canSavePayment() || savingPayment()"
+        (click)="savePayment()">{{ savingPayment() ? 'Saving...' : 'Record payment & create receipt' }}</button>
+      @if (paymentError()) { <div class="msg err">{{ paymentError() }}</div> }
     </div>
+  }
+  <div class="card">
+    <div class="cal-toolbar">
+      <div class="mode-switch">
+        <button type="button" [class.active]="calendarMode() === 'day'" (click)="setMode('day')">Day</button>
+        <button type="button" [class.active]="calendarMode() === 'week'" (click)="setMode('week')">Week</button>
+        <button type="button" [class.active]="calendarMode() === 'month'" (click)="setMode('month')">Month</button>
+      </div>
+      <button class="s" (click)="movePeriod(-1)" aria-label="Previous period">&lsaquo;</button>
+      <strong>{{ periodLabel() }}</strong>
+      <button class="s" (click)="movePeriod(1)" aria-label="Next period">&rsaquo;</button>
+      <button class="s" (click)="goToday()">Today</button>
+      <span class="spacer"></span>
+      <select style="max-width:200px" [(ngModel)]="therapistFilter" (ngModelChange)="load()">
+        <option [ngValue]="null">All therapists</option>
+        @for (t of therapists(); track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }
+      </select>
+    </div>
+    @if (calendarMode() === 'month') {
+      <div class="cal-grid">
+        @for (w of ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; track w) { <div class="cal-date" style="color:var(--mut);padding:4px">{{ w }}</div> }
+        @for (d of calendarDays(); track d) {
+          <div class="cal-cell" [class.today]="d === todayStr()" [class.selected]="d === day()" [class.muted]="d.slice(0,7) !== day().slice(0,7)"
+            (click)="selectDay(d)">
+            <div class="cal-date"><span>{{ dayNumber(d) }}</span><span>{{ appointmentsFor(d).length || '' }}</span></div>
+            @for (a of appointmentsFor(d).slice(0,3); track a.id) {
+              <span class="cal-item">{{ a.start_at.slice(11,16) }} {{ a.customer }}</span>
+            }
+            @if (appointmentsFor(d).length > 3) { <small>+{{ appointmentsFor(d).length-3 }} more</small> }
+          </div>
+        }
+      </div>
+    } @else if (calendarMode() === 'week') {
+      <div class="cal-week">
+        @for (d of calendarDays(); track d) {
+          <section [class.open]="d === day()">
+            <h4><button class="link" (click)="selectDay(d)">{{ weekday(d) }} · {{ dayNumber(d) }}</button></h4>
+            @for (a of appointmentsFor(d); track a.id) {
+              <div class="cal-item" [title]="a.customer + ' / ' + a.service">{{ a.start_at.slice(11,16) }} · {{ a.customer }}<small>{{ a.therapist }}</small></div>
+            } @empty { <small>No bookings</small> }
+          </section>
+        }
+      </div>
+    } @else {
+      <div class="wrap">
+        @if (rows().length) {
+          <table><tr><th>Time</th><th>Customer</th><th>Therapist</th><th>Service</th><th class="num">Price</th><th class="num">Paid</th><th class="num">Due</th><th>Payment status</th><th>Appointment status</th><th>Actions</th></tr>
+          @for (a of rows(); track a.id) {
+            <tr><td>{{ a.start_at.slice(11,16) }}</td><td>{{ a.customer }}<br><small>{{ a.phone }}</small></td>
+              <td>{{ a.therapist }}</td><td>{{ a.service }}</td><td class="num">{{ a.price | number:'1.2-2' }}</td>
+              <td class="num">{{ a.paid_amount || 0 | number:'1.2-2' }}</td><td class="num"><strong>{{ a.balance_due || 0 | number:'1.2-2' }}</strong></td>
+              <td><span class="pay-state" [class.pay-pending]="paymentState(a)==='pending'"
+                [class.pay-partial]="paymentState(a)==='partial'" [class.pay-paid]="paymentState(a)==='paid'"
+                [class.pay-prepaid]="paymentState(a)==='prepaid'">{{ paymentLabel(a) }}</span></td>
+              <td><select [ngModel]="a.status" (ngModelChange)="setStatus(a, $event)">
+                @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }</select></td>
+              <td style="white-space:nowrap">
+                @if (a.status === 'booked') { <button class="s" (click)="edit(a)">Edit</button> }
+                @if ((a.balance_due ?? 0) > 0 && (a.status === 'booked' || a.status === 'completed')) {
+                  <button class="s" (click)="startPayment(a)">Collect</button>
+                }
+              </td></tr>
+          }
+          </table>
+        } @else { <p>No appointments for this day.</p> }
+      </div>
+    }
+    @if (calendarMode() !== 'day') {
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <button class="s" (click)="calendarMode.set('day')">Open selected day · {{ day() }}</button>
+      </div>
+    }
+    <small style="display:block;margin-top:10px">Appointments are validated against each therapist's assigned shift. Payments reduce the outstanding balance; prepaid redemptions settle the appointment separately.</small>
   </div>`,
 })
 export class Appointments implements OnInit {
@@ -96,6 +189,11 @@ export class Appointments implements OnInit {
   statuses = STATUSES;
   customers = signal<Customer[]>([]); therapists = signal<Therapist[]>([]); services = signal<Service[]>([]);
   rows = signal<Appointment[]>([]); day = signal(today());
+  calendarMode = signal<'day'|'week'|'month'>('day');
+  therapistFilter: number | null = null;
+  collecting = signal<Appointment | null>(null);
+  paymentAmount: number | null = null; paymentMethod: PaymentMethod = 'cash';
+  paymentReference = ''; paymentNote = ''; savingPayment = signal(false); paymentError = signal('');
   msg = signal(''); isErr = signal(false);
   editId = signal<number | null>(null);
   slotValid = false;
@@ -124,7 +222,102 @@ export class Appointments implements OnInit {
     this.day.set(d.toISOString().slice(0, 10)); void this.load();
   }
 
-  async load() { this.rows.set(await this.api.get<Appointment[]>('/appointments', { date: this.day() })); }
+  async load() {
+    const [from, to] = this.viewRange();
+    this.rows.set(await this.api.get<Appointment[]>('/appointments', {
+      from, to, therapist_id: this.therapistFilter ?? undefined,
+    }));
+  }
+
+  private viewRange(): [string,string] {
+    const d = new Date(this.day() + 'T12:00:00');
+    if (this.calendarMode() === 'day') return [this.day(), this.day()];
+    if (this.calendarMode() === 'week') {
+      const offset = (d.getDay() + 6) % 7; d.setDate(d.getDate() - offset);
+      const from = d.toISOString().slice(0,10); d.setDate(d.getDate()+6);
+      return [from,d.toISOString().slice(0,10)];
+    }
+    d.setDate(1); const offset = (d.getDay()+6)%7; d.setDate(1-offset);
+    const from = d.toISOString().slice(0,10); d.setDate(d.getDate()+41);
+    return [from,d.toISOString().slice(0,10)];
+  }
+  calendarDays(): string[] {
+    const [from] = this.viewRange();
+    const count = this.calendarMode() === 'month' ? 42 : 7;
+    const d = new Date(from + 'T12:00:00');
+    return Array.from({length:count},(_,i)=>{ const x=new Date(d); x.setDate(x.getDate()+i); return x.toISOString().slice(0,10); });
+  }
+  appointmentsFor(date: string) { return this.rows().filter(a=>a.start_at.slice(0,10)===date); }
+  dayNumber(date: string) { return Number(date.slice(8,10)); }
+  weekday(date: string) { return new Date(date+'T12:00:00').toLocaleDateString('en-IN',{weekday:'short'}); }
+  periodLabel() {
+    if(this.calendarMode()==='month') return new Date(this.day()+'T12:00:00').toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+    const [from,to]=this.viewRange();
+    const fmt=(s:string)=>new Date(s+'T12:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+    return from===to ? fmt(from) : fmt(from)+' – '+fmt(to);
+  }
+  async setMode(mode:'day'|'week'|'month') { this.calendarMode.set(mode); await this.load(); }
+  async selectDay(date:string) { this.day.set(date); this.calendarMode.set('day'); await this.load(); }
+  async goToday() { this.day.set(today()); await this.load(); }
+  async movePeriod(delta:number) {
+    const d=new Date(this.day()+'T12:00:00');
+    if(this.calendarMode()==='month') d.setMonth(d.getMonth()+delta,1);
+    else d.setDate(d.getDate()+delta*(this.calendarMode()==='week'?7:1));
+    this.day.set(d.toISOString().slice(0,10)); await this.load();
+  }
+
+  paymentState(a:Appointment): 'pending'|'partial'|'paid'|'prepaid' {
+    if (a.payment_status) return a.payment_status;
+    if (a.plan_unit) return 'prepaid';
+    if (Number(a.balance_due ?? 0) <= 0 && Number(a.paid_amount ?? 0) > 0) return 'paid';
+    if (Number(a.paid_amount ?? 0) > 0) return 'partial';
+    return 'pending';
+  }
+  paymentLabel(a:Appointment) {
+    const state=this.paymentState(a);
+    if(state==='prepaid') return a.plan_unit ? 'Plan · '+(a.plan_unit==='hours'?'Hours':'Rupees') : 'Plan redeemed';
+    return ({pending:'Pending',partial:'Partially paid',paid:'Paid'} as Record<string,string>)[state];
+  }
+
+  startPayment(a:Appointment) {
+    this.collecting.set(a); this.paymentAmount=Number(a.balance_due ?? 0);
+    this.paymentMethod=a.preferred_payment_method ?? 'cash';
+    this.paymentReference=''; this.paymentNote=''; this.paymentError.set('');
+  }
+  cancelPayment() { this.collecting.set(null); this.paymentError.set(''); }
+  canSavePayment() {
+    const a=this.collecting();
+    return !!a && Number(this.paymentAmount)>0 && Number(this.paymentAmount)<=Number(a.balance_due);
+  }
+  async savePayment() {
+    const a=this.collecting(); if(!a || this.savingPayment()) return;
+    if(!(Number(this.paymentAmount)>0) || Number(this.paymentAmount)>Number(a.balance_due)) {
+      this.paymentError.set('Enter an amount greater than zero and no more than the outstanding balance.'); return;
+    }
+    this.savingPayment.set(true);
+    let result: {id:number;receipt_number:string;balance_due:number};
+    try {
+      result=await this.api.post<{id:number;receipt_number:string;balance_due:number}>(
+        '/appointments/'+a.id+'/payments',
+        {amount:Number(this.paymentAmount),method:this.paymentMethod,reference:this.paymentReference.trim()||null,note:this.paymentNote.trim()||null});
+      this.say('Payment recorded · '+result.receipt_number+' · remaining due ₹'+result.balance_due.toFixed(2));
+      this.collecting.set(null);
+      await this.load();
+    } catch(e) {
+      this.paymentError.set(errorText(e));
+      this.savingPayment.set(false);
+      return;
+    }
+    this.savingPayment.set(false);
+    try {
+      const blob=await this.api.blob('/payments/'+result.id+'/receipt');
+      const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url;
+      link.download='receipt_'+result.receipt_number+'.pdf'; link.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    } catch(e) {
+      this.say('Payment saved successfully. Receipt download failed; open Payments to download it again.',true);
+    }
+  }
 
   async save() {
     try {

@@ -70,7 +70,7 @@ interface ShiftReport {
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="p" (click)="download('pdf')" [disabled]="busy()">{{ busy() ? 'Preparing...' : 'Download PDF' }}</button>
-    <button class="p" (click)="download('csv')" [disabled]="busy()" style="background:var(--gold)">Export to Excel (CSV)</button>
+    <button class="p" (click)="download('xlsx')" [disabled]="busy()" style="background:var(--gold)">Export to Excel</button>
     @if (filtered()) { <button class="s" style="margin-top:14px" (click)="clear()">Clear filters</button> }
   </div>
   @if (err()) { <div class="msg err">{{ err() }}</div> }
@@ -80,7 +80,27 @@ interface ShiftReport {
       <div class="kpi"><span>Services done</span><b>{{ s.services_count }}</b></div>
       <div class="kpi"><span>Service time</span><b>{{ hrs(s.minutes) }}</b></div>
       @if (!filtered()) { <div class="kpi"><span>New customers</span><b>{{ s.new_customers }}</b></div> }
+      @if (s.plan_sales != null && (s.plan_sales || s.paid_by_plan)) {
+        <div class="kpi"><span>Plan sales</span><b>&#8377;{{ s.plan_sales | number: '1.0-2' }}</b></div>
+        <div class="kpi"><span>Paid from plans</span><b>&#8377;{{ s.paid_by_plan | number: '1.0-2' }}</b></div>
+      }
+      @if (s.collected != null) { <div class="kpi"><span>Money collected</span><b>&#8377;{{ s.collected | number: '1.0-2' }}</b></div> }
+      @if (s.profit != null) {
+        <div class="kpi"><span>Payroll</span><b>&#8377;{{ s.payroll | number: '1.0-0' }}</b></div>
+        <div class="kpi" [style.border-top-color]="s.profit < 0 ? 'var(--bad)' : 'var(--ok)'"><span>Profit after payroll</span>
+          <b [style.color]="s.profit < 0 ? 'var(--bad)' : 'var(--ok)'">&#8377;{{ s.profit | number: '1.0-0' }}</b></div>
+      }
     </div>
+    @if (s.plan_lines?.length) {
+      <h3>Plan sales ({{ s.plan_lines!.length }})</h3>
+      <div class="wrap"><table><tr><th>Date</th><th>Customer</th><th>Plan</th><th>Kind</th><th class="num">Amount</th><th class="num">Paid</th></tr>
+      @for (x of s.plan_lines; track $index) {
+        <tr><td>{{ when(x.at) }}</td><td>{{ x.customer }}</td><td>{{ x.plan }}</td><td>{{ x.kind === 'topup' ? 'Top-up' : 'New' }}</td>
+          <td class="num">{{ x.amount | number: '1.0-2' }} {{ x.plan_type === 'hours' ? 'hrs' : 'Rs' }}</td><td class="num">{{ x.price_paid | number: '1.2-2' }}</td></tr>
+      }
+      <tr><th colspan="5">Total</th><th class="num">{{ s.plan_sales | number: '1.2-2' }}</th></tr></table></div>
+      <p class="hint">Money collected = service revenue &minus; services paid from plans + plan sales.</p>
+    }
 
     <h3>By service</h3>
     <div class="wrap"><table><tr><th>Service</th><th class="num">Done</th><th class="num">Time</th><th class="num">Revenue</th></tr>
@@ -235,15 +255,15 @@ export class Reports implements OnInit {
   }
 
   /** The same report (period + filters) as a PDF, or every completed service as a CSV for Excel. */
-  async download(kind: 'pdf' | 'csv') {
+  async download(kind: 'pdf' | 'xlsx') {
     this.busy.set(true);
     try {
       const q = Object.entries(this.query()).filter(([, v]) => v !== undefined)
         .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&');
-      const blob = await this.api.blob(`/reports/summary/${kind}?${q}`);
+      const res = await this.api.download(`/reports/summary/${kind}?${q}`);
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `report_${this.mode === 'month' ? this.month : this.from + '_to_' + this.to}.${kind}`;
+      a.href = URL.createObjectURL(res.blob);
+      a.download = res.name || `report.${kind}`;
       a.click(); URL.revokeObjectURL(a.href);
     } catch (e) { this.err.set(errorText(e)); }
     this.busy.set(false);

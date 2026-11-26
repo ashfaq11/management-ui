@@ -39,6 +39,8 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
         <div><label>{{ plan.plan_type === 'hours' ? 'Hours purchased *' : 'Rupees purchased *' }}</label>
           <input type="number" min="0.01" step="0.01" [(ngModel)]="plan.amount">
         </div>
+        <div><label>Price paid (Rs){{ plan.plan_type === 'hours' ? ' *' : '' }}</label>
+          <input type="number" min="0" step="1" [(ngModel)]="plan.price_paid" [placeholder]="plan.plan_type === 'rupees' ? 'same as amount' : ''"></div>
         <div><label>Expiry date (optional)</label><input type="date" [(ngModel)]="plan.expires_on"></div>
       </div>
       <label>Plan notes</label><input [(ngModel)]="plan.notes" placeholder="Optional package details">
@@ -75,8 +77,8 @@ export class Onboarding implements OnInit {
   msg = signal(''); isErr = signal(false); saving = signal(false);
   c = blank(); therapist_id?: number; service_id?: number; start_at = ''; duration_min: number | null = null;
   includePlan = false;
-  plan: { name: string; plan_type: 'hours' | 'rupees'; amount: number | null; expires_on: string; notes: string } =
-    { name: '', plan_type: 'hours', amount: null, expires_on: '', notes: '' };
+  plan: { name: string; plan_type: 'hours' | 'rupees'; amount: number | null; price_paid: number | null; expires_on: string; notes: string } =
+    { name: '', plan_type: 'hours', amount: null, price_paid: null, expires_on: '', notes: '' };
 
   async ngOnInit() {
     const [t, s] = await Promise.all([this.api.get<Therapist[]>('/therapists'), this.api.get<Service[]>('/services')]);
@@ -93,7 +95,7 @@ export class Onboarding implements OnInit {
     this.therapist_id = undefined;
     this.service_id = undefined;
     this.includePlan = false;
-    this.plan = { name: '', plan_type: 'hours', amount: null, expires_on: '', notes: '' };
+    this.plan = { name: '', plan_type: 'hours', amount: null, price_paid: null, expires_on: '', notes: '' };
   }
 
   async save() {
@@ -103,6 +105,9 @@ export class Onboarding implements OnInit {
       this.msg.set('Enter the customer name and phone number.');
       this.isErr.set(true);
       return;
+    }
+    if (this.includePlan && this.plan.plan_type === 'hours' && (this.plan.price_paid === null || String(this.plan.price_paid) === '')) {
+      this.isErr.set(true); this.msg.set('Enter the price paid for the hours plan.'); return;
     }
     if (this.includePlan && (!this.plan.name.trim() || !(Number(this.plan.amount) > 0))) {
       this.msg.set('Enter a plan name and an amount greater than zero.');
@@ -132,6 +137,7 @@ export class Onboarding implements OnInit {
           await this.api.post('/customers/' + r.customer_id + '/plans', {
             name: this.plan.name.trim(), plan_type: this.plan.plan_type, amount: Number(this.plan.amount),
             expires_on: this.plan.expires_on || null, notes: this.plan.notes.trim() || null,
+            price_paid: this.plan.price_paid === null || String(this.plan.price_paid) === '' ? null : Number(this.plan.price_paid),
           });
         } catch (e) {
           this.msg.set(registered + ', but the prepaid plan could not be added: ' + errorText(e)

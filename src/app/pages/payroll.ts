@@ -36,10 +36,10 @@ export class Payroll implements OnInit {
 
   async pdf(id: number, name: string) {
     try {
-      const blob = await this.api.blob(`/payroll/${id}/${this.month}/pdf`);
+      const res = await this.api.download(`/payroll/${id}/${this.month}/pdf`);
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `payslip_${name.replace(/[^A-Za-z0-9_-]/g, '_')}_${this.month}.pdf`;
+      a.href = URL.createObjectURL(res.blob);
+      a.download = res.name || `payslip_${name.replace(/[^A-Za-z0-9_-]/g, '_')}_${this.month}.pdf`;
       a.click(); URL.revokeObjectURL(a.href);
     } catch (e) { this.err.set(errorText(e)); }
   }

@@ -60,6 +60,8 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
                 <div class="row">
                   <div><label>Add {{ p.plan_type === 'hours' ? 'hours' : 'rupees' }} to "{{ p.name }}"</label>
                     <input type="number" min="0.01" step="0.01" [(ngModel)]="planEdit!.amount"></div>
+                  <div><label>Price paid (Rs){{ p.plan_type === 'hours' ? ' *' : '' }}</label>
+                    <input type="number" min="0" step="1" [(ngModel)]="planEdit!.price_paid" [placeholder]="p.plan_type === 'rupees' ? 'same as amount' : ''"></div>
                   <div><label>Note (optional)</label><input [(ngModel)]="planEdit!.note" placeholder="e.g. paid by UPI"></div>
                 </div>
                 <small>New balance: {{ (+p.balance + +(planEdit!.amount || 0)) | number: '1.2-2' }}</small>
@@ -84,6 +86,8 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
           <option value="hours">Hours</option><option value="rupees">Rupees (INR)</option></select></div>
         <div><label>{{ planForm.plan_type === 'hours' ? 'Hours purchased' : 'Rupees purchased' }} *</label>
           <input type="number" min="0.01" step="0.01" [(ngModel)]="planForm.amount"></div>
+        <div><label>Price paid (Rs){{ planForm.plan_type === 'hours' ? ' *' : '' }}</label>
+          <input type="number" min="0" step="1" [(ngModel)]="planForm.price_paid" [placeholder]="planForm.plan_type === 'rupees' ? 'same as amount' : ''"></div>
         <div><label>Expiry date (optional)</label><input type="date" [(ngModel)]="planForm.expires_on"></div>
       </div>
       <label>Plan notes</label><input [(ngModel)]="planForm.notes" placeholder="Optional package details">
@@ -128,19 +132,20 @@ export class Customers implements OnInit {
   private api = inject(Api);
   auth = inject(Auth);
   form: Edit | null = null; formErr = signal('');
-  planForm = { name: '', plan_type: 'hours' as 'hours' | 'rupees', amount: 0, expires_on: '', notes: '' };
+  planForm = { name: '', plan_type: 'hours' as 'hours' | 'rupees', amount: 0, price_paid: null as number | null, expires_on: '', notes: '' };
   planMsg = signal(''); planErr = signal(false);
-  planEdit: { id: number; mode: 'edit' | 'topup'; name: string; expires_on: string; notes: string; amount: number | null; note: string } | null = null;
+  planEdit: { id: number; mode: 'edit' | 'topup'; name: string; expires_on: string; notes: string; amount: number | null; price_paid: number | null; note: string } | null = null;
   startPlan(p: { id: number; name: string; expires_on?: string | null; notes?: string | null }, mode: 'edit' | 'topup') {
     this.planMsg.set('');
-    this.planEdit = { id: p.id, mode, name: p.name, expires_on: p.expires_on ?? '', notes: p.notes ?? '', amount: null, note: '' };
+    this.planEdit = { id: p.id, mode, name: p.name, expires_on: p.expires_on ?? '', notes: p.notes ?? '', amount: null, price_paid: null, note: '' };
   }
   async savePlan(cid: number) {
     const e = this.planEdit!;
     try {
       if (e.mode === 'topup') {
         if (!(Number(e.amount) > 0)) { this.planErr.set(true); this.planMsg.set('Enter an amount greater than zero.'); return; }
-        await this.api.post(`/customers/${cid}/plans/${e.id}/topup`, { amount: Number(e.amount), note: e.note.trim() || null });
+        await this.api.post(`/customers/${cid}/plans/${e.id}/topup`, { amount: Number(e.amount), note: e.note.trim() || null,
+          price_paid: e.price_paid === null || String(e.price_paid) === '' ? null : Number(e.price_paid) });
         this.planMsg.set('Top-up added.');
       } else {
         await this.api.put(`/customers/${cid}/plans/${e.id}`, { name: e.name.trim(), expires_on: e.expires_on || null, notes: e.notes.trim() || null });
@@ -191,6 +196,9 @@ export class Customers implements OnInit {
   }
   async addPlan(id: number) {
     const p = this.planForm;
+    if (p.plan_type === 'hours' && (p.price_paid === null || String(p.price_paid) === '')) {
+      this.planErr.set(true); this.planMsg.set('Enter the price paid for the hours plan.'); return;
+    }
     if (!p.name.trim() || !(Number(p.amount) > 0)) {
       this.planErr.set(true); this.planMsg.set('Enter a plan name and an amount greater than zero.'); return;
     }
@@ -198,9 +206,10 @@ export class Customers implements OnInit {
       await this.api.post('/customers/' + id + '/plans', {
         name: p.name.trim(), plan_type: p.plan_type, amount: Number(p.amount),
         expires_on: p.expires_on || null, notes: p.notes.trim() || null,
+        price_paid: p.price_paid === null || String(p.price_paid) === '' ? null : Number(p.price_paid),
       });
       this.planErr.set(false); this.planMsg.set('Plan added.');
-      this.planForm = { name: '', plan_type: 'hours', amount: 0, expires_on: '', notes: '' };
+      this.planForm = { name: '', plan_type: 'hours', amount: 0, price_paid: null, expires_on: '', notes: '' };
       await this.open(id);
     } catch (e) { this.planErr.set(true); this.planMsg.set(errorText(e)); }
   }

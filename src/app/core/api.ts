@@ -43,6 +43,12 @@ export class Api {
   delete(path: string): Promise<unknown> {
     return firstValueFrom(this.http.delete(config.apiBase + path));
   }
+  /** A file download, with the server's standard file name from Content-Disposition. */
+  async download(path: string): Promise<{ blob: Blob; name: string | null }> {
+    const r = await firstValueFrom(this.http.get(config.apiBase + path, { responseType: 'blob', observe: 'response' }));
+    const m = /filename="?([^";]+)"?/.exec(r.headers.get('Content-Disposition') ?? '');
+    return { blob: r.body!, name: m ? m[1] : null };
+  }
   blob(path: string): Promise<Blob> {
     return firstValueFrom(this.http.get(config.apiBase + path, { responseType: 'blob' }));
   }

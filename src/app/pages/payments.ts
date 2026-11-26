@@ -18,7 +18,8 @@ import { today } from '../core/util';
   `],
   template: `
   <div class="page-head"><div><h1>Payments &amp; settlement</h1><p>Collections, receipts and refunds for the selected day.</p></div>
-    <div><label>Settlement date</label><input type="date" [(ngModel)]="day" (ngModelChange)="load()"></div>
+    <div style="display:flex;gap:10px;align-items:flex-end"><div><label>Settlement date</label><input type="date" [(ngModel)]="day" (ngModelChange)="load()"></div>
+      <button class="p" style="margin:0" (click)="settlementPdf()">Download settlement PDF</button></div>
   </div>
   @if (error()) { <div class="msg err">{{ error() }}</div> }
   <div class="summary">
@@ -92,6 +93,13 @@ export class Payments implements OnInit {
 
   ngOnInit() { return this.load(); }
 
+  async settlementPdf() {
+    try {
+      const res = await this.api.download('/payments/settlement/pdf?received_on=' + this.day);
+      const a = document.createElement('a'); a.href = URL.createObjectURL(res.blob);
+      a.download = res.name || `settlement_${this.day}.pdf`; a.click(); URL.revokeObjectURL(a.href);
+    } catch (e) { this.error.set(errorText(e)); }
+  }
   async load() {
     this.loading.set(true);
     try {

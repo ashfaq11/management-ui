@@ -310,9 +310,9 @@ export class Appointments implements OnInit {
     }
     this.savingPayment.set(false);
     try {
-      const blob=await this.api.blob('/payments/'+result.id+'/receipt');
+      const res=await this.api.download('/payments/'+result.id+'/receipt'); const blob=res.blob;
       const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url;
-      link.download='receipt_'+result.receipt_number+'.pdf'; link.click();
+      link.download=res.name||('receipt_'+result.receipt_number+'.pdf'); link.click();
       setTimeout(()=>URL.revokeObjectURL(url),1000);
     } catch(e) {
       this.say('Payment saved successfully. Receipt download failed; open Payments to download it again.',true);

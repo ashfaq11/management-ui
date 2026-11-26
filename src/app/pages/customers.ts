@@ -245,8 +245,8 @@ export class Customers implements OnInit {
   }
   async receipt(p:Payment) {
     try {
-      const blob=await this.api.blob('/payments/'+p.id+'/receipt'); const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download='receipt_SP-'+p.id.toString().padStart(6,'0')+'.pdf';a.click();URL.revokeObjectURL(url);
+      const res=await this.api.download('/payments/'+p.id+'/receipt'); const url=URL.createObjectURL(res.blob);
+      const a=document.createElement('a');a.href=url;a.download=res.name||('receipt_SP-'+p.id.toString().padStart(6,'0')+'.pdf');a.click();URL.revokeObjectURL(url);
     } catch(e) { this.err.set(errorText(e)); }
   }
   async open(id: number) {

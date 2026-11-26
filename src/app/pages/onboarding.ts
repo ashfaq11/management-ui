@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
+import { Auth } from '../core/auth';
 import { WhenPicker } from '../shared/when-picker';
 import { Service, Therapist } from '../core/models';
 
@@ -20,6 +21,7 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
     </div>
     <label>Notes (allergies, skin type, preferences)</label><textarea rows="2" [(ngModel)]="c.notes"></textarea>
 
+    @if (auth.isAdmin()) {
     <h2 style="margin-top:16px">Prepaid plan (optional)</h2>
     <label style="display:flex;align-items:center;gap:8px;margin:8px 0 12px">
       <input type="checkbox" [(ngModel)]="includePlan">
@@ -43,6 +45,8 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
       <small>Hours and rupees are separate balances. The selected balance type is what staff can redeem later.</small>
     }
 
+    }
+    
     <h2 style="margin-top:16px">First appointment (optional)</h2>
     <div class="grid">
       <div><label>Therapist</label><select [(ngModel)]="therapist_id">
@@ -66,6 +70,7 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
 })
 export class Onboarding implements OnInit {
   private api = inject(Api);
+  auth = inject(Auth);
   therapists = signal<Therapist[]>([]); services = signal<Service[]>([]);
   msg = signal(''); isErr = signal(false); saving = signal(false);
   c = blank(); therapist_id?: number; service_id?: number; start_at = ''; duration_min: number | null = null;
@@ -137,7 +142,10 @@ export class Onboarding implements OnInit {
         }
       }
 
-      this.msg.set(registered + (this.includePlan ? ' and added the prepaid plan.' : '.'));
+      const planSummary = this.includePlan
+        ? ' Added ' + Number(this.plan.amount).toFixed(2) + (this.plan.plan_type === 'hours' ? ' hours to the hours wallet.' : ' rupees to the rupees wallet.')
+        : '';
+      this.msg.set(registered + '.' + planSummary);
       this.isErr.set(false);
       this.resetForm();
     } catch (e) {

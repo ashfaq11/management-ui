@@ -65,7 +65,7 @@ import { today } from '../core/util';
             @for (p of plansByType('hours'); track p.id) {
               <small>{{ p.name }}: {{ p.balance | number: '1.2-2' }} hrs</small><br>
             }
-            <button class="p" [disabled]="!canDeduct('hours', pending)" (click)="completeWith('hours')">Deduct hours</button>
+            <button class="p" [disabled]="!canDeduct('hours', pending) || (pending.paid_amount ?? 0) > 0" (click)="completeWith('hours')">Deduct hours</button>
             @if (!canDeduct('hours', pending)) { <small>No single active hours plan has enough balance.</small> }
           </div>
           <div>
@@ -75,10 +75,11 @@ import { today } from '../core/util';
             @for (p of plansByType('rupees'); track p.id) {
               <small>{{ p.name }}: Rs {{ p.balance | number: '1.2-2' }}</small><br>
             }
-            <button class="p" [disabled]="!canDeduct('rupees', pending)" (click)="completeWith('rupees')">Deduct rupees</button>
+            <button class="p" [disabled]="!canDeduct('rupees', pending) || (pending.paid_amount ?? 0) > 0" (click)="completeWith('rupees')">Deduct rupees</button>
             @if (!canDeduct('rupees', pending)) { <small>No single active rupees plan has enough balance.</small> }
           </div>
         </div>
+        @if ((pending.paid_amount ?? 0) > 0) { <small class="shift-warn">A payment has already been recorded for this appointment. Refund it before using a prepaid plan.</small> }
         <small>The oldest eligible plan with enough balance will be used. Balances are not mixed between hours and rupees.</small>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
           <button class="s" (click)="completeWith(null)">Complete without plan deduction</button>
@@ -101,7 +102,7 @@ import { today } from '../core/util';
         <div><label>Transaction reference (optional)</label><input [(ngModel)]="paymentReference" maxlength="120"></div>
         <div><label>Note (optional)</label><input [(ngModel)]="paymentNote" maxlength="500"></div>
       </div>
-      <button class="p" [disabled]="savingPayment() || !(Number(paymentAmount) > 0) || Number(paymentAmount) > Number(a.balance_due)"
+      <button class="p" [disabled]="!canSavePayment() || savingPayment()"
         (click)="savePayment()">{{ savingPayment() ? 'Saving...' : 'Record payment & create receipt' }}</button>
       @if (paymentError()) { <div class="msg err">{{ paymentError() }}</div> }
     </div>
@@ -265,6 +266,10 @@ export class Appointments implements OnInit {
     this.paymentReference=''; this.paymentNote=''; this.paymentError.set('');
   }
   cancelPayment() { this.collecting.set(null); this.paymentError.set(''); }
+  canSavePayment() {
+    const a=this.collecting();
+    return !!a && Number(this.paymentAmount)>0 && Number(this.paymentAmount)<=Number(a.balance_due);
+  }
   async savePayment() {
     const a=this.collecting(); if(!a || this.savingPayment()) return;
     if(!(Number(this.paymentAmount)>0) || Number(this.paymentAmount)>Number(a.balance_due)) {

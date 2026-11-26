@@ -16,7 +16,7 @@ body{margin:0;font:15px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px;
   box-shadow:var(--shadow)}
-h2{margin:0 0 12px;font-size:19px;font-weight:650;letter-spacing:-.01em}
+h2{margin:0 0 12px;font-size:17px;font-weight:650;letter-spacing:-.01em}
 h3{margin:18px 0 8px;font-size:14px;font-weight:650;color:var(--acc);text-transform:uppercase;letter-spacing:.06em}
 label{display:block;font-size:12px;font-weight:600;color:var(--mut);margin:12px 0 5px;letter-spacing:.02em}
 small{color:var(--mut)}
@@ -59,13 +59,14 @@ tr:hover td{background:var(--acc-soft)}
 .card{animation:rise .22s ease-out;transition:box-shadow .2s,transform .2s}
 .card.spa:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(31,42,39,.06),0 14px 30px rgba(31,42,39,.1)}
 .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 16px}
-.page-head h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.02em}
+.page-head h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em}
 .page-head p{margin:2px 0 0;color:var(--mut);font-size:14px}
 .page-head .p{margin:0}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);
   border-top:3px solid var(--acc);animation:rise .22s ease-out}
 .kpi span{display:block;font-size:12px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
-.kpi b{font-size:24px;font-weight:700;letter-spacing:-.02em}.kpi b small{font-size:14px;color:var(--mut);font-weight:500}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:4px 0 14px}
+.kpi b{font-size:20px;font-weight:700;letter-spacing:-.02em}.kpi b small{font-size:14px;color:var(--mut);font-weight:500}
 .hint{font-size:13px;color:var(--mut);margin:0 0 6px}
 .badge.mute{background:var(--bg);color:var(--mut)}
 .badge.gold{background:#f4ead9;color:#8a6533}
@@ -89,3 +90,6 @@ tr.detail td{background:var(--bg);padding:14px 16px}
 .chips button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:5px 12px;font-size:13px}
 .chips button:hover{border-color:var(--acc);color:var(--acc)}
 .chips button.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+input[type=checkbox],input[type=radio]{width:18px;height:18px;min-height:0;padding:0;accent-color:var(--acc);vertical-align:middle;cursor:pointer}
+button.p+.hint,button.p~small{display:block;margin-top:8px}
+button.p,button.s{white-space:nowrap}

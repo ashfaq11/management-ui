@@ -75,8 +75,12 @@ interface ShiftReport {
   </div>
   @if (err()) { <div class="msg err">{{ err() }}</div> }
   @if (sum(); as s) {
-    <h2>Revenue Rs {{ s.revenue | number: '1.2-2' }} &middot; {{ s.services_count }} services done &middot; {{ hrs(s.minutes) }}
-      @if (!filtered()) { &middot; {{ s.new_customers }} new customers }</h2>
+    <div class="kpis">
+      <div class="kpi"><span>Revenue</span><b>&#8377;{{ s.revenue | number: '1.0-2' }}</b></div>
+      <div class="kpi"><span>Services done</span><b>{{ s.services_count }}</b></div>
+      <div class="kpi"><span>Service time</span><b>{{ hrs(s.minutes) }}</b></div>
+      @if (!filtered()) { <div class="kpi"><span>New customers</span><b>{{ s.new_customers }}</b></div> }
+    </div>
 
     <h3>By service</h3>
     <div class="wrap"><table><tr><th>Service</th><th class="num">Done</th><th class="num">Time</th><th class="num">Revenue</th></tr>

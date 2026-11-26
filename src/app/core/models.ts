@@ -24,6 +24,13 @@ export interface Therapist {
   bank_name?: string; bank_account_name?: string; bank_account_number?: string; bank_ifsc?: string; upi_id?: string;
 }
 export interface Service { id: number; name: string; price: number; duration_min: number; is_active: boolean; }
+export interface Shift {
+  id: number; name: string; start_time: string; end_time: string; is_active: boolean;
+}
+export interface ShiftAssignment {
+  id: number; therapist_id: number; therapist: string; shift_id: number; shift_name: string;
+  start_time: string; end_time: string; shift_is_active: boolean; day_of_week: number;
+}
 export interface Appointment {
   id: number; customer_id: number; therapist_id: number; service_id: number; start_at: string;
   duration_min: number; price: number; status: Status; notes?: string;

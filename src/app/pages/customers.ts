@@ -37,11 +37,31 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
         <h2>{{ c.name }} <button class="s" style="margin-left:8px" (click)="startEdit(c)">Edit</button></h2>
         <p>{{ c.phone }} {{ c.email }}<br>{{ c.notes }}</p>
       }
+      <h3>History</h3>
+      <div class="grid">
+        <div><label>From</label><input type="date" [(ngModel)]="hf.from"></div>
+        <div><label>To</label><input type="date" [(ngModel)]="hf.to"></div>
+        <div><label>Therapist</label><select [(ngModel)]="hf.therapist">
+          <option value="">All</option>
+          @for (t of distinct(c, 'therapist'); track t) { <option [value]="t">{{ t }}</option> }</select></div>
+        <div><label>Service</label><select [(ngModel)]="hf.service">
+          <option value="">All</option>
+          @for (x of distinct(c, 'service'); track x) { <option [value]="x">{{ x }}</option> }</select></div>
+        <div><label>Status</label><select [(ngModel)]="hf.status">
+          <option value="">All</option>
+          @for (x of distinct(c, 'status'); track x) { <option [value]="x">{{ x }}</option> }</select></div>
+      </div>
+      @if (hf.from || hf.to || hf.therapist || hf.service || hf.status) {
+        <button class="s" style="margin:10px 0" (click)="clearHist()">Clear filters</button>
+      }
+      @let rows = history(c);
+      <p style="margin:8px 0;color:var(--mut)">{{ rows.length }} visit(s) &middot; completed total Rs {{ spent(rows) | number: '1.2-2' }}</p>
       <div class="wrap"><table><tr><th>When</th><th>Service</th><th>Therapist</th><th class="num">Price</th><th>Status</th></tr>
-      @for (a of c.appointments; track a.id) {
+      @for (a of rows; track a.id) {
         <tr><td>{{ a.start_at.replace('T', ' ') }}</td><td>{{ a.service }}</td><td>{{ a.therapist }}</td>
           <td class="num">{{ a.price | number: '1.2-2' }}</td><td><span class="badge">{{ a.status }}</span></td></tr>
-      }</table></div>
+      } @empty { <tr><td colspan="5">No visits match.</td></tr> }
+      </table></div>
     </div>
   }`,
 })
@@ -49,13 +69,30 @@ export class Customers implements OnInit {
   private api = inject(Api);
   form: Edit | null = null; formErr = signal('');
   q = ''; list = signal<Customer[]>([]); sel = signal<Customer | null>(null); err = signal('');
+  hf = { from: '', to: '', therapist: '', service: '', status: '' };
   ngOnInit() { return this.load(); }
+  /** The customer's visits, narrowed by the history filters (dates are the spa's local days, both included). */
+  history(c: Customer) {
+    const f = this.hf;
+    return (c.appointments ?? []).filter((a) => {
+      const day = a.start_at.slice(0, 10);
+      return (!f.from || day >= f.from) && (!f.to || day <= f.to) && (!f.therapist || a.therapist === f.therapist)
+        && (!f.service || a.service === f.service) && (!f.status || a.status === f.status);
+    });
+  }
+  distinct(c: Customer, k: 'therapist' | 'service' | 'status') {
+    return [...new Set((c.appointments ?? []).map((a) => String(a[k] ?? '')).filter(Boolean))].sort();
+  }
+  spent(rows: { status: string; price: number }[]) {
+    return rows.filter((a) => a.status === 'completed').reduce((s, a) => s + Number(a.price), 0);
+  }
+  clearHist() { this.hf = { from: '', to: '', therapist: '', service: '', status: '' }; }
   async load() {
     try { this.list.set(await this.api.get<Customer[]>('/customers', { q: this.q })); this.err.set(''); }
     catch (e) { this.err.set(errorText(e)); }
   }
   async open(id: number) {
-    this.form = null;
+    this.form = null; this.clearHist();
     try { this.sel.set(await this.api.get<Customer>(`/customers/${id}`)); } catch (e) { this.err.set(errorText(e)); }
   }
   startEdit(c: Customer) {

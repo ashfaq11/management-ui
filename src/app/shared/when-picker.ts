@@ -31,7 +31,9 @@ const mins = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
   <label style="margin-top:8px">Time</label>
   <input type="time" step="900" [ngModel]="time()" (ngModelChange)="setTime($event)">
   @if (therapistId() && date()) {
-    @if (rosterConfigured()) {
+    @if (shiftLookupFailed()) {
+      <small class="shift-note shift-warn">Shift roster could not be loaded. Available times are provisional; the server validates the booking.</small>
+    } @else if (rosterConfigured()) {
       @if (dayShift(); as sh) {
         <small class="shift-note">Assigned shift: {{ sh.shift_name }} · {{ sh.start_time.slice(0,5) }}–{{ sh.end_time.slice(0,5) }}</small>
       } @else {
@@ -71,6 +73,7 @@ export class WhenPicker {
   slots = signal<{ t: string; free: boolean }[]>([]);
   loading = signal(false);
   rosterConfigured = signal(false);
+  shiftLookupFailed = signal(false);
   dayShift = signal<ShiftAssignment | null>(null);
   private busy: { from: number; to: number }[] = [];
 
@@ -98,21 +101,23 @@ export class WhenPicker {
 
   private async fetch(date: string, therapist: number | undefined, exclude: number | null) {
     if (!date || !therapist) {
-      this.busy = []; this.rosterConfigured.set(false); this.dayShift.set(null); this.build(); return;
+      this.busy = []; this.rosterConfigured.set(false); this.shiftLookupFailed.set(false);
+      this.dayShift.set(null); this.build(); return;
     }
     this.loading.set(true);
     try {
-      const [rows, assignments] = await Promise.all([
-        this.api.get<Appointment[]>('/appointments', { date, therapist_id: therapist }),
-        this.api.get<ShiftAssignment[]>('/shift-assignments', { therapist_id: therapist }),
-      ]);
+      const rows = await this.api.get<Appointment[]>('/appointments', { date, therapist_id: therapist });
       this.busy = rows.filter((a) => (a.status === 'booked' || a.status === 'completed') && a.id !== exclude)
         .map((a) => { const from = mins(a.start_at.slice(11, 16)); return { from, to: from + a.duration_min }; });
+    } catch { this.busy = []; }
+    try {
+      const assignments = await this.api.get<ShiftAssignment[]>('/shift-assignments', { therapist_id: therapist });
+      this.shiftLookupFailed.set(false);
       this.rosterConfigured.set(assignments.length > 0);
       const weekday = (new Date(date + 'T12:00:00').getDay() + 6) % 7;
       this.dayShift.set(assignments.find((a) => a.day_of_week === weekday && a.shift_is_active) ?? null);
     } catch {
-      this.busy = []; this.rosterConfigured.set(false); this.dayShift.set(null);
+      this.shiftLookupFailed.set(true); this.rosterConfigured.set(false); this.dayShift.set(null);
     }
     this.loading.set(false);
     this.build();
@@ -123,6 +128,7 @@ export class WhenPicker {
     if (!selected) return true;
     const from = mins(selected), finish = from + (this.durationMin() || 60);
     const sh = this.dayShift();
+    if (this.shiftLookupFailed()) return true;
     if (this.rosterConfigured()) return !!sh && from >= mins(sh.start_time.slice(0,5)) && finish <= mins(sh.end_time.slice(0,5));
     return from >= OPEN && finish <= CLOSE;
   }

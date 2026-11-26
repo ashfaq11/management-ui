@@ -4,6 +4,7 @@ import { Api } from './api';
 import { Me } from './models';
 
 const KEY = 'spa.token';
+const PICK = 'spa.pick';
 
 @Injectable({ providedIn: 'root' })
 export class Auth {
@@ -11,7 +12,20 @@ export class Auth {
   private router = inject(Router);
   readonly token = signal<string | null>(this.read());
   readonly me = signal<Me | null>(null);
-  readonly isAdmin = computed(() => this.me()?.role === 'admin');
+  readonly isSuper = computed(() => this.me()?.role === 'superadmin');
+  readonly isAdmin = computed(() => this.me()?.role === 'admin' || this.isSuper());
+  /** The spa a superadmin is working in (sent as X-Spa-Id); admins and staff always work in their own. */
+  readonly pick = signal<{ id: number; name: string } | null>(this.readPick());
+  readonly spaName = computed(() => (this.isSuper() ? this.pick()?.name : this.me()?.spa_name) ?? null);
+  readonly hasSpa = computed(() => !this.isSuper() || !!this.pick());
+
+  private readPick() {
+    try { return JSON.parse(sessionStorage.getItem(PICK) ?? 'null'); } catch { return null; }
+  }
+  choose(spa: { id: number; name: string } | null) {
+    this.pick.set(spa);
+    try { if (spa) sessionStorage.setItem(PICK, JSON.stringify(spa)); else sessionStorage.removeItem(PICK); } catch { /* ignore */ }
+  }
 
   private read(): string | null {
     try { return sessionStorage.getItem(KEY); } catch { return null; }
@@ -38,7 +52,7 @@ export class Auth {
   }
 
   clear() {
-    this.token.set(null); this.me.set(null);
-    try { sessionStorage.removeItem(KEY); } catch { /* ignore */ }
+    this.token.set(null); this.me.set(null); this.pick.set(null);
+    try { sessionStorage.removeItem(KEY); sessionStorage.removeItem(PICK); } catch { /* ignore */ }
   }
 }

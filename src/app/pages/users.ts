@@ -2,35 +2,46 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
 import { Auth } from '../core/auth';
-import { User } from '../core/models';
+import { Spa, User } from '../core/models';
 
 @Component({
   selector: 'app-users', imports: [FormsModule],
   template: `
-  <div class="card"><h2>Staff accounts</h2>
-    <div class="wrap"><table><tr><th>Username</th><th>Role</th><th>Active</th><th></th></tr>
+  <div class="page-head"><div><h1>Users</h1><p>{{ auth.isSuper() ? 'Every login across all spas.' : 'Logins for ' + auth.spaName() + '.' }}</p></div></div>
+  <div class="card"><h2>Accounts</h2>
+    <div class="wrap"><table><tr><th>Username</th>@if (auth.isSuper()) { <th>Spa</th> }<th>Role</th><th>Active</th><th></th></tr>
     @for (u of users(); track u.id) {
       <tr><td>{{ u.username }} @if (u.id === auth.me()?.id) { <span class="badge">you</span> }</td>
-        <td><select [ngModel]="u.role" (ngModelChange)="update(u, $event, !!u.is_active)" [disabled]="u.id === auth.me()?.id">
-          <option value="staff">staff</option><option value="admin">admin</option></select></td>
-        <td><input type="checkbox" style="width:auto" [checked]="!!u.is_active" [disabled]="u.id === auth.me()?.id"
+        @if (auth.isSuper()) { <td>{{ u.spa ?? '—' }}</td> }
+        <td>@if (auth.isSuper() && u.role !== 'superadmin') {
+          <select [ngModel]="u.role" (ngModelChange)="update(u, $event, !!u.is_active)">
+            <option value="staff">staff</option><option value="admin">admin</option></select>
+          } @else { <span class="badge" [class.gold]="u.role !== 'staff'">{{ u.role }}</span> }</td>
+        <td><input type="checkbox" style="width:auto" [checked]="!!u.is_active" [disabled]="!canChange(u)"
               (change)="update(u, u.role, !u.is_active)"></td>
         <td>
           @if (resetId() === u.id) {
             <input type="password" placeholder="New password (8+)" style="width:170px" [(ngModel)]="newPw">
             <button class="s" (click)="reset(u)">Set</button> <button class="s" (click)="resetId.set(null)">Cancel</button>
-          } @else { <button class="s" (click)="startReset(u)">Reset password</button> }
+          } @else if (canChange(u)) { <button class="s" (click)="startReset(u)">Reset password</button> }
         </td></tr>
     }</table></div>
     @if (msg()) { <div class="msg" [class.err]="isErr()">{{ msg() }}</div> }
-    <p style="font-size:12px;color:var(--mut)">Admins can do everything. Staff can use customers, onboarding and appointments only.
+    <p class="hint">Admins run their spa and add its staff. Staff use customers, onboarding and appointments only.
       Deactivating an account or resetting its password signs that person out immediately.</p>
   </div>
   <div class="card"><h2>Add user</h2>
     <div class="row">
       <div><label>Username (3+)</label><input name="nu" autocomplete="off" [(ngModel)]="nu"></div>
       <div><label>Password (8+)</label><input type="password" name="np" autocomplete="new-password" [(ngModel)]="np"></div>
-      <div><label>Role</label><select [(ngModel)]="nr"><option value="staff">staff</option><option value="admin">admin</option></select></div>
+      @if (auth.isSuper()) {
+        <div><label>Role</label><select [(ngModel)]="nr"><option value="staff">staff</option><option value="admin">admin</option>
+          <option value="superadmin">superadmin</option></select></div>
+        @if (nr !== 'superadmin') {
+          <div><label>Spa</label><select [(ngModel)]="nspa">
+            @for (p of spas(); track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }</select></div>
+        }
+      } @else { <div><label>Role</label><input value="staff" disabled></div> }
     </div>
     <button class="p" (click)="add()">Create user</button>
   </div>`,
@@ -38,16 +49,25 @@ import { User } from '../core/models';
 export class Users implements OnInit {
   private api = inject(Api);
   auth = inject(Auth);
-  users = signal<User[]>([]); msg = signal(''); isErr = signal(false); resetId = signal<number | null>(null);
-  nu = ''; np = ''; nr: 'staff' | 'admin' = 'staff'; newPw = '';
+  users = signal<User[]>([]); spas = signal<Spa[]>([]); nspa: number | null = null; msg = signal(''); isErr = signal(false); resetId = signal<number | null>(null);
+  nu = ''; np = ''; nr: 'staff' | 'admin' | 'superadmin' = 'staff'; newPw = '';
 
   ngOnInit() { return this.load(); }
-  async load() { this.users.set(await this.api.get<User[]>('/users')); }
+  async load() {
+    this.users.set(await this.api.get<User[]>('/users'));
+    if (this.auth.isSuper() && !this.spas().length) {
+      this.spas.set(await this.api.get<Spa[]>('/spas'));
+      this.nspa = this.auth.pick()?.id ?? this.spas()[0]?.id ?? null;
+    }
+  }
+  canChange(u: User) { return u.id !== this.auth.me()?.id && (this.auth.isSuper() || u.role === 'staff'); }
   private say(t: string, err = false) { this.msg.set(t); this.isErr.set(err); }
 
   async add() {
     try {
-      await this.api.post('/users', { username: this.nu.trim(), password: this.np, role: this.nr });
+      const sup = this.auth.isSuper();
+      await this.api.post('/users', { username: this.nu.trim(), password: this.np, role: sup ? this.nr : 'staff',
+        spa_id: sup && this.nr !== 'superadmin' ? this.nspa : null });
       this.say(`Created ${this.nu.trim()}`); this.nu = ''; this.np = ''; this.nr = 'staff'; await this.load();
     } catch (e) { this.say(errorText(e), true); }
   }

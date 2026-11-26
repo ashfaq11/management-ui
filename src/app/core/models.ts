@@ -1,7 +1,12 @@
 export type Status = 'booked' | 'completed' | 'cancelled' | 'no_show';
 export const STATUSES: Status[] = ['booked', 'completed', 'cancelled', 'no_show'];
 
-export interface Me { id: number; username: string; role: 'admin' | 'staff'; }
+export type Role = 'superadmin' | 'admin' | 'staff';
+export interface Me { id: number; username: string; role: Role; spa_id: number | null; spa: number | null; spa_name: string | null; }
+export interface Spa {
+  id: number; name: string; is_active: boolean; created_at: string; admins: number; staff: number; customers: number;
+  revenue_this_month: number;
+}
 export interface Customer {
   id: number; name: string; phone: string; email?: string; gender?: string; dob?: string;
   address?: string; notes?: string; created_at: string; appointments?: Appointment[];
@@ -9,6 +14,9 @@ export interface Customer {
 export interface Therapist {
   id: number; name: string; phone?: string; fixed_salary: number; incentive_percent: number;
   is_active: boolean; joined_on?: string;
+  email?: string; gender?: string; dob?: string; address?: string; specialities?: string; experience_years?: number;
+  notes?: string; emergency_name?: string; emergency_phone?: string; id_proof_type?: string; id_proof_number?: string;
+  bank_name?: string; bank_account_name?: string; bank_account_number?: string; bank_ifsc?: string; upi_id?: string;
 }
 export interface Service { id: number; name: string; price: number; duration_min: number; is_active: boolean; }
 export interface Appointment {
@@ -32,4 +40,4 @@ export interface Summary {
   lines: { id: number; start_at: string; price: number; customer: string; service: string; therapist_id: number; therapist: string }[];
 }
 
-export interface User { id: number; username: string; role: 'admin' | 'staff'; is_active: boolean; }
+export interface User { id: number; username: string; role: Role; is_active: boolean; spa_id: number | null; spa: string | null; }

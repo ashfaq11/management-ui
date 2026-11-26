@@ -53,3 +53,34 @@ tr:hover td{background:var(--acc-soft)}
 .msg.err{background:var(--bad-soft);color:var(--bad)}
 .badge{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--acc-soft);color:var(--acc);font-size:12px;font-weight:600}
 .wrap>p{margin:0;padding:14px;color:var(--mut)}
+
+/* ---- page polish ---- */
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.card{animation:rise .22s ease-out;transition:box-shadow .2s,transform .2s}
+.card.spa:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(31,42,39,.06),0 14px 30px rgba(31,42,39,.1)}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 16px}
+.page-head h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.02em}
+.page-head p{margin:2px 0 0;color:var(--mut);font-size:14px}
+.page-head .p{margin:0}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);
+  border-top:3px solid var(--acc);animation:rise .22s ease-out}
+.kpi span{display:block;font-size:12px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.kpi b{font-size:24px;font-weight:700;letter-spacing:-.02em}.kpi b small{font-size:14px;color:var(--mut);font-weight:500}
+.hint{font-size:13px;color:var(--mut);margin:0 0 6px}
+.badge.mute{background:var(--bg);color:var(--mut)}
+.badge.gold{background:#f4ead9;color:#8a6533}
+.pop{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft),var(--shadow)}
+details.sec{border:1px solid var(--line);border-radius:12px;margin-top:12px;background:var(--card)}
+details.sec>summary{cursor:pointer;padding:11px 14px;font-weight:600;font-size:14px;list-style:none;display:flex;align-items:center;gap:8px}
+details.sec>summary::before{content:"\25B8";color:var(--acc);transition:transform .15s}
+details.sec[open]>summary::before{transform:rotate(90deg)}
+details.sec>summary small{font-weight:500;margin-left:auto}
+details.sec>.grid,details.sec>.body{padding:0 14px 14px}
+.dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px 18px;padding:4px 2px}
+.dl div span{display:block;font-size:11px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.dl div b{font-weight:500;word-break:break-word}
+tr.open td{background:var(--acc-soft)}
+tr.detail td{background:var(--bg);padding:14px 16px}
+.link{background:none;border:0;padding:0;color:var(--acc);font-weight:600;cursor:pointer;text-align:left}
+.link:hover{text-decoration:underline}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

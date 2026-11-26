@@ -93,13 +93,12 @@ export class Payments implements OnInit {
   async load() {
     this.loading.set(true);
     try {
-      const rows = await this.api.get<Payment[]>('/payments', { received_on:this.day });
+      const [rows, report] = await Promise.all([
+        this.api.get<Payment[]>('/payments', { received_on:this.day }),
+        this.api.get<PaymentReport>('/payments/settlement', { received_on:this.day }),
+      ]);
       this.rows.set(rows);
-      this.report.set(null);
-      if (this.auth.isAdmin()) {
-        try { this.report.set(await this.api.get<PaymentReport>('/reports/payments',{received_on:this.day})); }
-        catch { /* staff-grade ledger remains available */ }
-      }
+      this.report.set(report);
       this.error.set('');
     } catch (e) {
       this.error.set(errorText(e));

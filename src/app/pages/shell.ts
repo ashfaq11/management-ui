@@ -13,6 +13,7 @@ import { Spa } from '../core/models';
     .brand{font-weight:700;font-size:17px;letter-spacing:.01em;display:flex;align-items:center;gap:9px;color:#fff;text-decoration:none}
     .brand i{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.16);
       font-style:normal;font-size:16px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+    .brand img{width:38px;height:38px;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.12);padding:3px}
     .brand small{display:block;font-size:11px;font-weight:500;opacity:.75;color:#fff;letter-spacing:.04em;text-transform:uppercase}
     .sp{flex:1}
     select.spa{width:auto;min-height:34px;max-width:200px;padding:5px 30px 5px 10px;border-radius:9px;font-size:13px;
@@ -36,7 +37,7 @@ import { Spa } from '../core/models';
   template: `
   <header>
     <div class="top">
-      <a class="brand" routerLink="/"><i>&#10047;</i><span>{{ auth.spaName() || 'StudioDesk' }}
+      <a class="brand" routerLink="/">@if (auth.spaLogo()) { <img [src]="auth.spaLogo()" alt="Spa logo"> } @else { <i>&#10047;</i> }<span>{{ auth.spaName() || 'StudioDesk' }}
         @if (auth.isSuper()) { <small>Super admin</small> }</span></a>
       <span class="sp"></span>
       @if (auth.isSuper() && spas().length) {
@@ -78,7 +79,13 @@ export class Shell implements OnInit {
     // a superadmin lands on Spas until one is opened
     effect(() => { if (this.auth.isSuper() && !this.auth.pick() && (this.router.url === '/appointments' || this.router.url === '/dashboard')) this.router.navigateByUrl('/spas'); });
   }
-  async ngOnInit() { if (this.auth.isSuper()) this.spas.set(await this.api.get<Spa[]>('/spas')); }
+  async ngOnInit() {
+    if (this.auth.isSuper()) this.spas.set(await this.api.get<Spa[]>('/spas'));
+    if (this.auth.hasSpa()) {
+      try { this.auth.spaLogo.set((await this.api.get<{ logo_data_url: string | null }>('/spa/logo')).logo_data_url); }
+      catch { this.auth.spaLogo.set(null); }
+    }
+  }
   pick(v: string) {
     const s = this.spas().find((x) => x.id === +v);
     this.auth.choose(s ? { id: s.id, name: s.name } : null);

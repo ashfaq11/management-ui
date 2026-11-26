@@ -5,6 +5,25 @@ import { Api, errorText } from '../core/api';
 import { Customer, IncentiveReport, Service, Summary, Therapist } from '../core/models';
 import { thisMonth, today } from '../core/util';
 
+interface PrepaidPlan {
+  id: number; customer_id: number; customer: string; phone: string; name: string; plan_type: 'hours' | 'rupees';
+  purchased_amount: number; balance: number; used_amount: number; expires_on: string | null; created_at: string;
+}
+interface PlanRedemption {
+  id: number; appointment_id: number; amount: number; unit: 'hours' | 'rupees'; deducted_at: string;
+  reversed_at: string | null; plan_id: number; plan_name: string; customer_id: number; customer: string; phone: string;
+  start_at: string; duration_min: number; price: number; service: string; therapist: string;
+}
+interface PlanReport {
+  from: string; to: string;
+  summary: {
+    plans_added: number; sold_hours: number; sold_rupees: number; available_hours: number; available_rupees: number;
+    deducted_hours: number; deducted_rupees: number; reversed_hours: number; reversed_rupees: number; redemptions: number;
+  };
+  plans: PrepaidPlan[];
+  redemptions: PlanRedemption[];
+}
+
 @Component({
   selector: 'app-reports', imports: [FormsModule, DecimalPipe],
   template: `
@@ -75,6 +94,45 @@ import { thisMonth, today } from '../core/util';
     }
     </table></div>
   }
+  @if (planReport(); as p) {
+    <h2 style="margin-top:22px">Prepaid plan reporting</h2>
+    <p style="color:var(--mut)">Plan sales are for the selected period. Available balances show current, non-expired customer wallets.</p>
+    <div class="grid">
+      <div><label>Hours sold in period</label><h2>{{ p.summary.sold_hours | number: '1.2-2' }} hrs</h2></div>
+      <div><label>Rupees sold in period</label><h2>Rs {{ p.summary.sold_rupees | number: '1.2-2' }}</h2></div>
+      <div><label>Hours available now</label><h2>{{ p.summary.available_hours | number: '1.2-2' }} hrs</h2></div>
+      <div><label>Rupees available now</label><h2>Rs {{ p.summary.available_rupees | number: '1.2-2' }}</h2></div>
+      <div><label>Hours deducted in period</label><h2>{{ p.summary.deducted_hours | number: '1.2-2' }} hrs</h2>
+        <small>Reversed: {{ p.summary.reversed_hours | number: '1.2-2' }} hrs</small></div>
+      <div><label>Rupees deducted in period</label><h2>Rs {{ p.summary.deducted_rupees | number: '1.2-2' }}</h2>
+        <small>Reversed: Rs {{ p.summary.reversed_rupees | number: '1.2-2' }}</small></div>
+      <div><label>Plans added</label><h2>{{ p.summary.plans_added }}</h2></div>
+      <div><label>Redemption records</label><h2>{{ p.summary.redemptions }}</h2></div>
+    </div>
+
+    <h3>Plans added in period</h3>
+    <div class="wrap"><table><tr><th>Customer</th><th>Plan</th><th>Type</th><th class="num">Purchased</th><th class="num">Used</th><th class="num">Current balance</th><th>Expiry</th></tr>
+      @for (x of p.plans; track x.id) {
+        <tr><td>{{ x.customer }}<br><small>{{ x.phone }}</small></td><td>{{ x.name }}</td>
+          <td>{{ x.plan_type === 'hours' ? 'Hours' : 'Rupees' }}</td>
+          <td class="num">{{ x.plan_type === 'hours' ? (x.purchased_amount | number: '1.2-2') + ' hrs' : ('Rs ' + (x.purchased_amount | number: '1.2-2')) }}</td>
+          <td class="num">{{ x.plan_type === 'hours' ? (x.used_amount | number: '1.2-2') + ' hrs' : ('Rs ' + (x.used_amount | number: '1.2-2')) }}</td>
+          <td class="num"><strong>{{ x.plan_type === 'hours' ? (x.balance | number: '1.2-2') + ' hrs' : ('Rs ' + (x.balance | number: '1.2-2')) }}</strong></td>
+          <td>{{ x.expires_on || 'Never' }}</td></tr>
+      } @empty { <tr><td colspan="7">No plans were added in this period.</td></tr> }
+    </table></div>
+
+    <h3 style="margin-top:16px">Plan deductions and reversals</h3>
+    <div class="wrap"><table><tr><th>Appointment</th><th>Customer</th><th>Service</th><th>Therapist</th><th>Plan</th><th class="num">Amount</th><th>Deducted at</th><th>Reversed at</th></tr>
+      @for (x of p.redemptions; track x.id) {
+        <tr><td>#{{ x.appointment_id }}<br><small>{{ when(x.start_at) }}</small></td>
+          <td>{{ x.customer }}<br><small>{{ x.phone }}</small></td><td>{{ x.service }}</td><td>{{ x.therapist }}</td><td>{{ x.plan_name }}</td>
+          <td class="num">{{ x.unit === 'hours' ? (x.amount | number: '1.2-2') + ' hrs' : ('Rs ' + (x.amount | number: '1.2-2')) }}</td>
+          <td>{{ when(x.deducted_at) }}</td><td>{{ x.reversed_at ? when(x.reversed_at) : '—' }}</td></tr>
+      } @empty { <tr><td colspan="8">No plan deductions or reversals in this period.</td></tr> }
+    </table></div>
+  }
+
   @if (mode === 'month' && inc(); as i) {
     <h2 style="margin-top:16px">Therapist incentives</h2>
     <div class="wrap"><table><tr><th>Therapist</th><th class="num">Services</th><th class="num">Revenue</th><th class="num">%</th><th class="num">Incentive</th><th class="num">Extra</th></tr>
@@ -93,7 +151,8 @@ export class Reports implements OnInit {
   month = thisMonth(); therapistId: number | null = null;
   therapists = signal<Therapist[]>([]); customers = signal<Customer[]>([]); services = signal<Service[]>([]);
   customerId: number | null = null; serviceId: number | null = null;
-  busy = signal(false); sum = signal<Summary | null>(null); inc = signal<IncentiveReport | null>(null); err = signal('');
+  busy = signal(false); sum = signal<Summary | null>(null); inc = signal<IncentiveReport | null>(null);
+  planReport = signal<PlanReport | null>(null); err = signal('');
 
   async ngOnInit() {
     try {
@@ -107,10 +166,11 @@ export class Reports implements OnInit {
   async load() {
     if (this.mode === 'month' ? !this.month : !(this.from && this.to)) return;
     try {
-      const [s, i] = await Promise.all([
+      const [s, i, p] = await Promise.all([
         this.api.get<Summary>('/reports/summary', this.query()),
-        this.api.get<IncentiveReport>('/reports/incentives', { month: this.month })]);
-      this.sum.set(s); this.inc.set(i); this.err.set('');
+        this.api.get<IncentiveReport>('/reports/incentives', { month: this.month }),
+        this.api.get<PlanReport>('/reports/plans', { ...this.period(), customer_id: this.customerId ?? undefined })]);
+      this.sum.set(s); this.inc.set(i); this.planReport.set(p); this.err.set('');
     } catch (e) { this.err.set(errorText(e)); }
   }
 

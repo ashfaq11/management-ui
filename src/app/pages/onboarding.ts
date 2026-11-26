@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
 import { Auth } from '../core/auth';
 import { WhenPicker } from '../shared/when-picker';
-import { Service, Therapist } from '../core/models';
+import { PaymentMethod, Service, Therapist } from '../core/models';
 
 const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', address: '', notes: '' });
 
@@ -18,6 +18,9 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
       <div><label>Gender</label><select [(ngModel)]="c.gender"><option value="">-</option><option>Female</option><option>Male</option><option>Other</option></select></div>
       <div><label>Date of birth</label><input type="date" [(ngModel)]="c.dob"></div>
       <div><label>Address</label><input [(ngModel)]="c.address"></div>
+      <div><label>Preferred payment method (optional)</label><select [(ngModel)]="preferredPaymentMethod">
+        <option value="">No preference</option><option value="cash">Cash</option><option value="upi">UPI</option>
+        <option value="card">Card</option><option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select></div>
     </div>
     <label>Notes (allergies, skin type, preferences)</label><textarea rows="2" [(ngModel)]="c.notes"></textarea>
 
@@ -75,6 +78,7 @@ export class Onboarding implements OnInit {
   msg = signal(''); isErr = signal(false); saving = signal(false);
   c = blank(); therapist_id?: number; service_id?: number; start_at = ''; duration_min: number | null = null;
   includePlan = false;
+  preferredPaymentMethod: PaymentMethod | '' = '';
   plan: { name: string; plan_type: 'hours' | 'rupees'; amount: number | null; expires_on: string; notes: string } =
     { name: '', plan_type: 'hours', amount: null, expires_on: '', notes: '' };
 
@@ -93,6 +97,7 @@ export class Onboarding implements OnInit {
     this.therapist_id = undefined;
     this.service_id = undefined;
     this.includePlan = false;
+    this.preferredPaymentMethod = '';
     this.plan = { name: '', plan_type: 'hours', amount: null, expires_on: '', notes: '' };
   }
 
@@ -112,6 +117,11 @@ export class Onboarding implements OnInit {
 
     const body: Record<string, unknown> = { name: this.c.name.trim(), phone: this.c.phone.trim() };
     for (const k of ['email', 'gender', 'dob', 'address', 'notes'] as const) body[k] = this.c[k] || null;
+    body['preferred_payment_method'] = this.preferredPaymentMethod || null;
+    if (this.includePlan) body['plan'] = {
+      name: this.plan.name.trim(), plan_type: this.plan.plan_type, amount: Number(this.plan.amount),
+      expires_on: this.plan.expires_on || null, notes: this.plan.notes.trim() || null,
+    };
     if (this.therapist_id || this.service_id || this.start_at) {
       if (!this.therapist_id || !this.service_id || !this.start_at) {
         this.msg.set('For a first appointment pick a therapist, a service, a date and a time - or leave them all empty.');
@@ -124,25 +134,9 @@ export class Onboarding implements OnInit {
 
     this.saving.set(true);
     try {
-      const r = await this.api.post<{ customer_id: number; appointment_id: number | null }>('/onboarding', body);
+      const r = await this.api.post<{ customer_id: number; appointment_id: number | null; plan_id: number | null }>('/onboarding', body);
       const registered = 'Registered customer #' + r.customer_id + (r.appointment_id ? ' with first appointment booked' : '');
-
-      if (this.includePlan) {
-        try {
-          await this.api.post('/customers/' + r.customer_id + '/plans', {
-            name: this.plan.name.trim(), plan_type: this.plan.plan_type, amount: Number(this.plan.amount),
-            expires_on: this.plan.expires_on || null, notes: this.plan.notes.trim() || null,
-          });
-        } catch (e) {
-          this.msg.set(registered + ', but the prepaid plan could not be added: ' + errorText(e)
-            + ' Open this customer under Customers and add the plan from History.');
-          this.isErr.set(true);
-          this.resetForm();
-          return;
-        }
-      }
-
-      const planSummary = this.includePlan
+      const planSummary = r.plan_id
         ? ' Added ' + Number(this.plan.amount).toFixed(2) + (this.plan.plan_type === 'hours' ? ' hours to the hours wallet.' : ' rupees to the rupees wallet.')
         : '';
       this.msg.set(registered + '.' + planSummary);

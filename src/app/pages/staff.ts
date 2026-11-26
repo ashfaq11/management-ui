@@ -22,7 +22,7 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
     .shift-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end}
     .shift-day{font-weight:600;color:var(--acc)}
     .shift-subtle{font-size:12px;color:var(--mut)}
-    .shift-empty{padding:16px;border:1px dashed var(--line);border-radius:12px;color:var(--mut);background:var(--surface)}
+    .shift-empty{padding:16px;border:1px dashed var(--line);border-radius:12px;color:var(--mut);background:var(--bg)}
   `],
   template: `
   <div class="page-head"><div><h1>Therapists &amp; services</h1><p>Your team, their profiles, and the treatments you offer.</p></div></div>
@@ -93,6 +93,7 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
         @if (shiftId()) { <button class="s" (click)="resetShift()">Cancel</button> }
       </div>
     </div>
+    @if (shiftLoadError()) { <div class="msg err">Shift scheduling API is not available yet. Existing therapist and service management remains usable.</div> }
     @if (shiftMsg()) { <div class="msg" [class.err]="shiftErr()">{{ shiftMsg() }}</div> }
     @if (shifts().length) {
       <div class="wrap" style="margin-top:14px"><table>
@@ -161,7 +162,7 @@ export class Staff implements OnInit {
   therapists = signal<Therapist[]>([]); services = signal<Service[]>([]);
   shifts = signal<Shift[]>([]); assignments = signal<ShiftAssignment[]>([]);
   shiftId = signal<number | null>(null);
-  shiftMsg = signal(''); shiftErr = signal(false);
+  shiftMsg = signal(''); shiftErr = signal(false); shiftLoadError = signal(false);
   assignmentMsg = signal(''); assignmentErr = signal(false);
   shiftForm = { name: '', start_time: '09:00', end_time: '17:00', is_active: true };
   assignmentForm: { therapist_id: number | null; shift_id: number | null; day_of_week: number } =
@@ -175,10 +176,16 @@ export class Staff implements OnInit {
 
   async ngOnInit() { await this.reload(); }
   async reload() {
-    const [t, s, sh, a] = await Promise.all([
-      this.api.get<Therapist[]>('/therapists'), this.api.get<Service[]>('/services'),
-      this.api.get<Shift[]>('/shifts'), this.api.get<ShiftAssignment[]>('/shift-assignments')]);
-    this.therapists.set(t); this.services.set(s); this.shifts.set(sh); this.assignments.set(a);
+    const [t, s] = await Promise.all([
+      this.api.get<Therapist[]>('/therapists'), this.api.get<Service[]>('/services')]);
+    this.therapists.set(t); this.services.set(s);
+    try {
+      const [sh, a] = await Promise.all([
+        this.api.get<Shift[]>('/shifts'), this.api.get<ShiftAssignment[]>('/shift-assignments')]);
+      this.shifts.set(sh); this.assignments.set(a); this.shiftLoadError.set(false);
+    } catch {
+      this.shifts.set([]); this.assignments.set([]); this.shiftLoadError.set(true);
+    }
   }
 
   editT(x: Therapist) {
@@ -231,8 +238,9 @@ export class Staff implements OnInit {
       const id = this.shiftId();
       if (id) await this.api.put('/shifts/' + id, this.shiftForm);
       else await this.api.post('/shifts', this.shiftForm);
+      this.resetShift();
       this.shiftErr.set(false); this.shiftMsg.set(id ? 'Shift updated.' : 'Shift created.');
-      this.resetShift(); await this.reload();
+      await this.reload();
     } catch (e) { this.shiftErr.set(true); this.shiftMsg.set(errorText(e)); }
   }
   async toggleShift(x: Shift) {
@@ -249,6 +257,7 @@ export class Staff implements OnInit {
     }
     try {
       await this.api.post('/shift-assignments', a);
+      this.assignmentForm = { ...this.assignmentForm, therapist_id: null, shift_id: null };
       this.assignmentErr.set(false); this.assignmentMsg.set('Weekly shift assigned.');
       await this.reload();
     } catch (e) { this.assignmentErr.set(true); this.assignmentMsg.set(errorText(e)); }

@@ -42,8 +42,8 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
         <div><label>{{ plan.plan_type === 'hours' ? 'Hours purchased *' : 'Rupees purchased *' }}</label>
           <input type="number" min="0.01" step="0.01" [(ngModel)]="plan.amount">
         </div>
-        <div><label>Price paid (Rs){{ plan.plan_type === 'hours' ? ' *' : '' }}</label>
-          <input type="number" min="0" step="1" [(ngModel)]="plan.price_paid" [placeholder]="plan.plan_type === 'rupees' ? 'same as amount' : ''"></div>
+        <div><label>Plan cost (Rs, optional)</label>
+          <input type="number" min="0" step="1" [(ngModel)]="plan.price_paid" [placeholder]="plan.plan_type === 'rupees' ? 'same as amount' : 'e.g. 9000 for 10 hrs'"></div>
         <div><label>Expiry date (optional)</label><input type="date" [(ngModel)]="plan.expires_on"></div>
       </div>
       <label>Plan notes</label><input [(ngModel)]="plan.notes" placeholder="Optional package details">
@@ -110,9 +110,6 @@ export class Onboarding implements OnInit {
       this.msg.set('Enter the customer name and phone number.');
       this.isErr.set(true);
       return;
-    }
-    if (this.includePlan && this.plan.plan_type === 'hours' && (this.plan.price_paid === null || String(this.plan.price_paid) === '')) {
-      this.isErr.set(true); this.msg.set('Enter the price paid for the hours plan.'); return;
     }
     if (this.includePlan && (!this.plan.name.trim() || !(Number(this.plan.amount) > 0))) {
       this.msg.set('Enter a plan name and an amount greater than zero.');

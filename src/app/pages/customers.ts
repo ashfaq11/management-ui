@@ -83,7 +83,7 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
                 <div class="row">
                   <div><label>Add {{ p.plan_type === 'hours' ? 'hours' : 'rupees' }} to "{{ p.name }}"</label>
                     <input type="number" min="0.01" step="0.01" [(ngModel)]="planEdit!.amount"></div>
-                  <div><label>Price paid (Rs){{ p.plan_type === 'hours' ? ' *' : '' }}</label>
+                  <div><label>Cost (Rs, optional)</label>
                     <input type="number" min="0" step="0.01" [(ngModel)]="planEdit!.price_paid" [placeholder]="p.plan_type === 'rupees' ? 'same as amount' : ''"></div>
                   <div><label>Note (optional)</label><input [(ngModel)]="planEdit!.note" placeholder="e.g. paid by UPI"></div>
                 </div>
@@ -109,8 +109,8 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
           <option value="hours">Hours</option><option value="rupees">Rupees (INR)</option></select></div>
         <div><label>{{ planForm.plan_type === 'hours' ? 'Hours purchased' : 'Rupees purchased' }} *</label>
           <input type="number" min="0.01" step="0.01" [(ngModel)]="planForm.amount"></div>
-        <div><label>Price paid (Rs){{ planForm.plan_type === 'hours' ? ' *' : '' }}</label>
-          <input type="number" min="0" step="0.01" [(ngModel)]="planForm.price_paid" [placeholder]="planForm.plan_type === 'rupees' ? 'same as amount' : ''"></div>
+        <div><label>Plan cost (Rs, optional)</label>
+          <input type="number" min="0" step="0.01" [(ngModel)]="planForm.price_paid" [placeholder]="planForm.plan_type === 'rupees' ? 'same as amount' : 'e.g. 9000 for 10 hrs'"></div>
         <div><label>Expiry date (optional)</label><input type="date" [(ngModel)]="planForm.expires_on"></div>
       </div>
       <label>Plan notes</label><input [(ngModel)]="planForm.notes" placeholder="Optional package details">
@@ -255,9 +255,6 @@ export class Customers implements OnInit {
   }
   async addPlan(id: number) {
     const p = this.planForm;
-    if (p.plan_type === 'hours' && (p.price_paid === null || String(p.price_paid) === '')) {
-      this.planErr.set(true); this.planMsg.set('Enter the price paid for the hours plan.'); return;
-    }
     if (!p.name.trim() || !(Number(p.amount) > 0)) {
       this.planErr.set(true); this.planMsg.set('Enter a plan name and an amount greater than zero.'); return;
     }

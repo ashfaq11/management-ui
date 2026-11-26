@@ -52,9 +52,11 @@ import { Spa } from '../core/models';
     <nav>
       @if (auth.isSuper()) { <a routerLink="/spas" routerLinkActive="on">Spas</a><span class="sep"></span> }
       @if (auth.hasSpa()) {
+        <a routerLink="/dashboard" routerLinkActive="on">Dashboard</a>
         <a routerLink="/appointments" routerLinkActive="on">Appointments</a>
         <a routerLink="/onboarding" routerLinkActive="on">New customer</a>
         <a routerLink="/customers" routerLinkActive="on">Customers</a>
+        <a routerLink="/payments" routerLinkActive="on">Payments</a>
         @if (auth.isAdmin()) {
           <a routerLink="/staff" routerLinkActive="on">Team &amp; shifts</a>
           <a routerLink="/reports" routerLinkActive="on">Reports</a>
@@ -74,7 +76,7 @@ export class Shell implements OnInit {
 
   constructor() {
     // a superadmin lands on Spas until one is opened
-    effect(() => { if (this.auth.isSuper() && !this.auth.pick() && this.router.url === '/appointments') this.router.navigateByUrl('/spas'); });
+    effect(() => { if (this.auth.isSuper() && !this.auth.pick() && (this.router.url === '/appointments' || this.router.url === '/dashboard')) this.router.navigateByUrl('/spas'); });
   }
   async ngOnInit() { if (this.auth.isSuper()) this.spas.set(await this.api.get<Spa[]>('/spas')); }
   pick(v: string) {

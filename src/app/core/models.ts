@@ -14,7 +14,8 @@ export interface CustomerPlan {
 }
 export type PaymentMethod = 'cash' | 'upi' | 'card' | 'bank_transfer' | 'other';
 export interface Payment {
-  id: number; appointment_id: number; customer_id: number; customer?: string; phone?: string;
+  id: number; payment_id?: number; event_type?: 'payment' | 'refund';
+  appointment_id: number; customer_id: number; customer?: string; phone?: string;
   amount: number; method: PaymentMethod; reference?: string | null; note?: string | null;
   received_at: string; refunded_amount: number; net_amount: number;
 }

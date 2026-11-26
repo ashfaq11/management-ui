@@ -42,36 +42,36 @@ import { thisMonth, today } from '../core/util';
   </div>
   @if (err()) { <div class="msg err">{{ err() }}</div> }
   @if (sum(); as s) {
-    <h2>Revenue Rs {{ s.revenue | number: '1.2-2' }} &middot; {{ s.services_count }} services done
+    <h2>Revenue Rs {{ s.revenue | number: '1.2-2' }} &middot; {{ s.services_count }} services done &middot; {{ hrs(s.minutes) }}
       @if (!filtered()) { &middot; {{ s.new_customers }} new customers }</h2>
 
     <h3>By service</h3>
-    <div class="wrap"><table><tr><th>Service</th><th class="num">Done</th><th class="num">Revenue</th></tr>
+    <div class="wrap"><table><tr><th>Service</th><th class="num">Done</th><th class="num">Time</th><th class="num">Revenue</th></tr>
     @for (x of s.by_service; track x.service) {
-      <tr><td>{{ x.service }}</td><td class="num">{{ x.count }}</td><td class="num">{{ x.revenue | number: '1.2-2' }}</td></tr>
-    } @empty { <tr><td colspan="3">No completed services this month</td></tr> }
+      <tr><td>{{ x.service }}</td><td class="num">{{ x.count }}</td><td class="num">{{ hrs(x.minutes) }}</td><td class="num">{{ x.revenue | number: '1.2-2' }}</td></tr>
+    } @empty { <tr><td colspan="4">No completed services this month</td></tr> }
     </table></div>
 
     <h3 style="margin-top:16px">By therapist</h3>
-    <div class="wrap"><table><tr><th>Therapist / service</th><th class="num">Done</th><th class="num">Amount</th></tr>
+    <div class="wrap"><table><tr><th>Therapist / service</th><th class="num">Done</th><th class="num">Time</th><th class="num">Amount</th></tr>
     @for (t of s.by_therapist; track t.therapist_id) {
-      <tr style="font-weight:700;background:var(--acc-soft)"><td>{{ t.therapist }}</td><td class="num">{{ t.count }}</td>
+      <tr style="font-weight:700;background:var(--acc-soft)"><td>{{ t.therapist }}</td><td class="num">{{ t.count }}</td><td class="num">{{ hrs(t.minutes) }}</td>
         <td class="num">{{ t.revenue | number: '1.2-2' }}</td></tr>
       @for (x of t.services; track x.service) {
-        <tr><td style="padding-left:20px">{{ x.service }}</td><td class="num">{{ x.count }}</td>
+        <tr><td style="padding-left:20px">{{ x.service }}</td><td class="num">{{ x.count }}</td><td class="num">{{ hrs(x.minutes) }}</td>
           <td class="num">{{ x.revenue | number: '1.2-2' }}</td></tr>
       }
-    } @empty { <tr><td colspan="3">No completed services this month</td></tr> }
+    } @empty { <tr><td colspan="4">No completed services this month</td></tr> }
     </table></div>
 
     <h3 style="margin-top:16px">All services done ({{ s.lines.length }})</h3>
-    <div class="wrap"><table><tr><th>Date</th><th>Customer</th><th>Service</th><th>Therapist</th><th class="num">Price</th></tr>
+    <div class="wrap"><table><tr><th>Date</th><th>Customer</th><th>Service</th><th>Therapist</th><th class="num">Minutes</th><th class="num">Price</th></tr>
     @for (x of s.lines; track x.id) {
-      <tr><td>{{ when(x.start_at) }}</td><td>{{ x.customer }}</td><td>{{ x.service }}</td><td>{{ x.therapist }}</td>
+      <tr><td>{{ when(x.start_at) }}</td><td>{{ x.customer }}</td><td>{{ x.service }}</td><td>{{ x.therapist }}</td><td class="num">{{ x.duration_min }}</td>
         <td class="num">{{ x.price | number: '1.2-2' }}</td></tr>
-    } @empty { <tr><td colspan="5">No completed services this month</td></tr> }
+    } @empty { <tr><td colspan="6">No completed services this month</td></tr> }
     @if (s.lines.length) {
-      <tr><th colspan="4">Total</th><th class="num">{{ s.revenue | number: '1.2-2' }}</th></tr>
+      <tr><th colspan="4">Total</th><th class="num">{{ s.minutes }}</th><th class="num">{{ s.revenue | number: '1.2-2' }}</th></tr>
     }
     </table></div>
   }
@@ -150,4 +150,6 @@ export class Reports implements OnInit {
     const d = new Date(v.slice(0, 16) + ':00');
     return isNaN(+d) ? v : d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
   }
+  /** 90 -> '1 h 30 min' */
+  hrs(m?: number) { m = +(m ?? 0); const h = Math.floor(m / 60); return (h ? h + ' h ' : '') + (m % 60 || !h ? (m % 60) + ' min' : '').trim(); }
 }

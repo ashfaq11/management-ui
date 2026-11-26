@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
 import { Auth } from '../core/auth';
 import { Customer } from '../core/models';
+import { today } from '../core/util';
 
 type Edit = { name: string; phone: string; email: string; gender: string; dob: string; address: string; notes: string };
 
@@ -122,12 +123,12 @@ export class Customers implements OnInit {
     return rows.filter((a) => a.status === 'completed').reduce((s, a) => s + Number(a.price), 0);
   }
   availableBalance(c: Customer, type: 'hours' | 'rupees') {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = today();
     return (c.plans ?? []).filter((p) => p.plan_type === type && Number(p.balance) > 0
       && (!p.expires_on || p.expires_on >= today)).reduce((sum, p) => sum + Number(p.balance), 0);
   }
   planStatus(p: { balance: number; expires_on?: string | null }) {
-    if (p.expires_on && p.expires_on < new Date().toISOString().slice(0, 10)) return 'Expired';
+    if (p.expires_on && p.expires_on < today()) return 'Expired';
     return Number(p.balance) > 0 ? 'Available' : 'Used up';
   }
   clearHist() { this.hf = { from: '', to: '', therapist: '', service: '', status: '' }; }

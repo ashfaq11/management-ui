@@ -28,7 +28,9 @@ export interface DashboardData {
   date: string;
   today: { total: number; booked: number; completed: number; cancelled: number; no_show: number; completed_value: number };
   collections: { gross: number; refunds: number; net: number };
-  customers_today: number; total_customers: number; therapists_on_shift: number; upcoming: Appointment[];
+  customers_today: number; total_customers: number; therapists_on_shift: number;
+  monthly: { month: string; completed: number; revenue: number; new_customers: number }[];
+  upcoming: Appointment[];
 }
 export interface PaymentReport {
   date: string; gross: number; refunds: number; net: number;

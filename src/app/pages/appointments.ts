@@ -176,7 +176,7 @@ import { today } from '../core/util';
       </div>
     }
     <small style="display:block;margin-top:10px">Appointments are validated against each therapist's assigned shift. Payments reduce the outstanding balance; prepaid redemptions settle the appointment separately.</small>
-  </div>  </div>`,
+  </div>`,
 })
 export class Appointments implements OnInit {
   private api = inject(Api);
@@ -245,6 +245,7 @@ export class Appointments implements OnInit {
   dayNumber(date: string) { return Number(date.slice(8,10)); }
   weekday(date: string) { return new Date(date+'T12:00:00').toLocaleDateString('en-IN',{weekday:'short'}); }
   periodLabel() {
+    if(this.calendarMode()==='month') return new Date(this.day()+'T12:00:00').toLocaleDateString('en-IN',{month:'long',year:'numeric'});
     const [from,to]=this.viewRange();
     const fmt=(s:string)=>new Date(s+'T12:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
     return from===to ? fmt(from) : fmt(from)+' – '+fmt(to);
@@ -254,7 +255,6 @@ export class Appointments implements OnInit {
   async goToday() { this.day.set(today()); await this.load(); }
   async movePeriod(delta:number) {
     const d=new Date(this.day()+'T12:00:00');
-    d.setDate(d.getDate()+(this.calendarMode()==='month' ? 0 : 0));
     if(this.calendarMode()==='month') d.setMonth(d.getMonth()+delta,1);
     else d.setDate(d.getDate()+delta*(this.calendarMode()==='week'?7:1));
     this.day.set(d.toISOString().slice(0,10)); await this.load();

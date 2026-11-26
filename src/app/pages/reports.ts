@@ -75,23 +75,43 @@ interface ShiftReport {
   </div>
   @if (err()) { <div class="msg err">{{ err() }}</div> }
   @if (sum(); as s) {
-    <div class="kpis">
-      <div class="kpi"><span>Revenue</span><b>&#8377;{{ s.revenue | number: '1.0-2' }}</b></div>
-      <div class="kpi"><span>Services done</span><b>{{ s.services_count }}</b></div>
-      <div class="kpi"><span>Service time</span><b>{{ hrs(s.minutes) }}</b></div>
-      @if (!filtered()) { <div class="kpi"><span>New customers</span><b>{{ s.new_customers }}</b></div> }
-      @if (s.plan_sales != null && (s.plan_sales || s.paid_by_plan)) {
-        <div class="kpi"><span>Plan sales</span><b>&#8377;{{ s.plan_sales | number: '1.0-2' }}</b></div>
-        <div class="kpi"><span>Paid from plans</span><b>&#8377;{{ s.paid_by_plan | number: '1.0-2' }}</b></div>
-      }
-      @if (s.collected != null) { <div class="kpi"><span>Money collected</span><b>&#8377;{{ s.collected | number: '1.0-2' }}</b></div> }
-      @if (s.expenses != null && !filtered()) { <div class="kpi"><span>Expenses</span><b>&#8377;{{ s.expenses | number: '1.0-0' }}</b></div> }
-      @if (s.profit != null) {
-        <div class="kpi"><span>Payroll</span><b>&#8377;{{ s.payroll | number: '1.0-0' }}</b></div>
-        <div class="kpi" [style.border-top-color]="s.profit < 0 ? 'var(--bad)' : 'var(--ok)'"><span>Net profit</span>
-          <b [style.color]="s.profit < 0 ? 'var(--bad)' : 'var(--ok)'">&#8377;{{ s.profit | number: '1.0-0' }}</b></div>
-      }
+    <div class="figs">
+      <div class="fig teal"><i class="ic">&#8377;</i><span>Service revenue</span><b>{{ inr(s.revenue) }}</b>
+        <small>completed services</small></div>
+      <div class="fig blue"><i class="ic">&#10003;</i><span>Services done</span><b>{{ s.services_count }}</b>
+        <small>{{ s.services_count ? inr(s.revenue / s.services_count) + ' avg' : '&nbsp;' }}</small></div>
+      <div class="fig violet"><i class="ic">&#9719;</i><span>Service time</span><b>{{ hrs(s.minutes) }}</b>
+        <small>{{ s.services_count ? hrs(s.minutes / s.services_count) + ' per service' : '&nbsp;' }}</small></div>
+      @if (!filtered()) { <div class="fig amber"><i class="ic">&#9733;</i><span>New customers</span><b>{{ s.new_customers }}</b>
+        <small>joined this period</small></div> }
     </div>
+
+    @if (s.collected != null && !filtered()) {
+      <div class="flow">
+        <h4>Money this period</h4>
+        <div class="steps">
+          <div class="step"><span>Service revenue</span><b>{{ inr(s.revenue) }}</b></div>
+          <div class="step minus"><span>&minus; Paid from plans</span><b>{{ inr(-(s.paid_by_plan ?? 0)) }}</b></div>
+          <div class="step plus"><span>+ Plan sales</span><b>{{ inr(s.plan_sales ?? 0) }}</b></div>
+          <div class="step sum"><span>= Money collected</span><b>{{ inr(s.collected) }}</b></div>
+          @if (s.profit != null) { <div class="step minus"><span>&minus; Payroll</span><b>{{ inr(-(s.payroll ?? 0)) }}</b></div> }
+          <div class="step minus"><span>&minus; Expenses</span><b>{{ inr(-(s.expenses ?? 0)) }}</b></div>
+        </div>
+        @if (s.profit != null) {
+          <div class="net" [class.neg]="s.profit < 0"><span>Net profit</span><b>{{ inr(s.profit) }}</b>
+            <small>{{ s.collected ? (s.profit / s.collected * 100 | number: '1.0-0') + '% of money collected' : '' }}</small></div>
+          @if (s.collected > 0) {
+            <div class="bar">
+              <i [style.width.%]="pct(s.payroll ?? 0, s.collected)" style="background:var(--violet)"></i>
+              <i [style.width.%]="pct(s.expenses ?? 0, s.collected)" style="background:var(--gold)"></i>
+              <i [style.width.%]="pct(s.profit > 0 ? s.profit : 0, s.collected)" style="background:var(--ok)"></i>
+            </div>
+            <div class="legend"><span><em style="background:var(--violet)"></em>Payroll</span>
+              <span><em style="background:var(--gold)"></em>Expenses</span><span><em style="background:var(--ok)"></em>Profit</span></div>
+          }
+        } @else { <p class="hint" style="margin:10px 0 0">Pick a whole month without filters to see payroll and net profit.</p> }
+      </div>
+    }
     @if (s.plan_lines?.length) {
       <h3>Plan sales ({{ s.plan_lines!.length }})</h3>
       <div class="wrap"><table><tr><th>Date</th><th>Customer</th><th>Plan</th><th>Kind</th><th class="num">Amount</th><th class="num">Paid</th></tr>
@@ -292,5 +312,11 @@ export class Reports implements OnInit {
     return isNaN(+d) ? v : d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
   }
   /** 90 -> '1 h 30 min' */
-  hrs(m?: number) { m = +(m ?? 0); const h = Math.floor(m / 60); return (h ? h + ' h ' : '') + (m % 60 || !h ? (m % 60) + ' min' : '').trim(); }
+  hrs(m?: number) { m = Math.round(+(m ?? 0)); const h = Math.floor(m / 60); return (h ? h + ' h ' : '') + (m % 60 || !h ? (m % 60) + ' min' : '').trim(); }
+  /** -5900 -> '−₹5,900' (Indian grouping, sign before the symbol). */
+  inr(v: number | null | undefined) {
+    const n = Number(v ?? 0);
+    return (n < 0 ? '\u2212' : '') + '\u20B9' + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: n % 1 ? 2 : 0 });
+  }
+  pct(part: number, whole: number) { return whole > 0 ? Math.max(0, Math.min(100, (part / whole) * 100)) : 0; }
 }

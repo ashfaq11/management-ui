@@ -7,7 +7,7 @@ import { Spa } from '../core/models';
 @Component({
   selector: 'app-shell', imports: [RouterOutlet, RouterLink, RouterLinkActive],
   styles: [`
-    header{position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#2f5d50 0%,#24493f 60%,#1d3b33 100%);color:#fff;
+    header{position:sticky;top:0;z-index:10;background:linear-gradient(120deg,var(--hdr1) 0%,var(--hdr2) 55%,var(--hdr3) 100%);color:#fff;
       box-shadow:0 4px 18px rgba(0,0,0,.16)}
     .top{display:flex;align-items:center;gap:10px;max-width:1120px;margin:0 auto;padding:12px 16px 4px}
     .brand{font-weight:700;font-size:17px;letter-spacing:.01em;display:flex;align-items:center;gap:9px;color:#fff;text-decoration:none}
@@ -17,10 +17,10 @@ import { Spa } from '../core/models';
     .sp{flex:1}
     select.spa{width:auto;min-height:34px;max-width:200px;padding:5px 30px 5px 10px;border-radius:9px;font-size:13px;
       background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3)}
-    select.spa option{color:#1f2a27}
+    select.spa option{color:#0f1c2e}
     .me{display:flex;align-items:center;gap:8px;color:#fff;text-decoration:none;font-size:13px;padding:4px 10px 4px 4px;border-radius:99px}
     .me:hover{background:rgba(255,255,255,.12)}
-    .me b{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#fff;color:#2f5d50;font-size:13px}
+    .me b{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#fff;color:#0e6e6a;font-size:13px}
     .me span{line-height:1.15}.me em{display:block;font-style:normal;font-size:11px;opacity:.75;text-transform:capitalize}
     .out{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:9px;padding:6px 12px;font-size:13px}
     .out:hover{background:rgba(255,255,255,.12)}
@@ -29,7 +29,7 @@ import { Spa } from '../core/models';
     nav a{color:#fff;opacity:.82;text-decoration:none;padding:8px 14px;border-radius:99px;white-space:nowrap;font-size:14px;
       transition:background .15s,opacity .15s}
     nav a:hover{opacity:1;background:rgba(255,255,255,.1)}
-    nav a.on{opacity:1;background:#fff;color:#2f5d50;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+    nav a.on{opacity:1;background:#fff;color:#0e6e6a;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.12)}
     .sep{width:1px;background:rgba(255,255,255,.25);margin:6px 4px}
     main{max-width:1120px;margin:0 auto;padding:20px 16px 48px;animation:rise .25s ease-out}
     @media(max-width:620px){.me span,.brand small{display:none}}`],

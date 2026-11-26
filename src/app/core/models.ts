@@ -29,6 +29,7 @@ export interface Appointment {
   duration_min: number; price: number; status: Status; notes?: string;
   customer?: string; phone?: string; therapist?: string; service?: string;
   plan_name?: string | null; plan_deducted?: number | null; plan_unit?: 'hours' | 'rupees' | null;
+  plan_deducted_at?: string | null; plan_reversed_at?: string | null;
 }
 export interface Payslip {
   therapist_id: number; therapist: string; month: string; fixed_salary: number; services_count: number;

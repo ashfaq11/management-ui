@@ -36,7 +36,7 @@ import { Spa } from '../core/models';
   template: `
   <header>
     <div class="top">
-      <a class="brand" routerLink="/"><i>&#10047;</i><span>{{ auth.spaName() || 'Spa Manager' }}
+      <a class="brand" routerLink="/"><i>&#10047;</i><span>{{ auth.spaName() || 'StudioDesk' }}
         @if (auth.isSuper()) { <small>Super admin</small> }</span></a>
       <span class="sp"></span>
       @if (auth.isSuper() && spas().length) {

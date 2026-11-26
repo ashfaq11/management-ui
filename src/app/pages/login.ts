@@ -8,7 +8,7 @@ import { Auth } from '../core/auth';
   selector: 'app-login', imports: [FormsModule],
   template: `
   <form class="card" style="max-width:340px;margin:12vh auto" (ngSubmit)="go()">
-    <h2>Spa Manager - Sign in</h2>
+    <h2>StudioDesk</h2><p class="hint" style="margin-top:-6px">Sign in to manage bookings, customers and payroll.</p>
     <label>Username</label><input name="u" [(ngModel)]="username" autocomplete="username">
     <label>Password</label><input name="p" type="password" [(ngModel)]="password" autocomplete="current-password">
     <button class="p" [disabled]="busy()">Sign in</button>

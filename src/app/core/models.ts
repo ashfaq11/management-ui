@@ -56,6 +56,7 @@ export interface Appointment {
   duration_min: number; price: number; status: Status; notes?: string;
   customer?: string; phone?: string; therapist?: string; service?: string;
   preferred_payment_method?: PaymentMethod | null; paid_amount?: number; balance_due?: number;
+  payment_status?: 'pending' | 'partial' | 'paid' | 'prepaid'; plan_unit?: 'hours' | 'rupees' | null;
   plan_name?: string | null; plan_deducted?: number | null; plan_unit?: 'hours' | 'rupees' | null;
   plan_deducted_at?: string | null; plan_reversed_at?: string | null;
 }

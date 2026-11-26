@@ -25,7 +25,7 @@ import { today } from '../core/util';
     <div class="settle"><span>Gross received</span><strong>₹{{ summary().gross | number:'1.2-2' }}</strong></div>
     <div class="settle"><span>Refunds issued</span><strong>₹{{ summary().refunds | number:'1.2-2' }}</strong></div>
     <div class="settle"><span>Net collections</span><strong>₹{{ summary().net | number:'1.2-2' }}</strong></div>
-    <div class="settle"><span>Transactions</span><strong>{{ rows().length }}</strong></div>
+    <div class="settle"><span>Payment activities</span><strong>{{ rows().length }}</strong></div>
   </div>
   @if (summary().methods.length) {
     <div class="card"><h2>Collection by method</h2>
@@ -39,17 +39,17 @@ import { today } from '../core/util';
     <div class="row" style="align-items:center;justify-content:space-between"><h2>Payment ledger</h2>
       <button class="s" (click)="load()" [disabled]="loading()">{{ loading() ? 'Loading...' : 'Refresh' }}</button></div>
     <div class="wrap"><table>
-      <tr><th>Receipt</th><th>Received</th><th>Customer</th><th>Appointment</th><th>Method</th><th class="num">Amount</th><th class="num">Refunded</th><th></th></tr>
+      <tr><th>Type</th><th>Time</th><th>Customer</th><th>Appointment</th><th>Method</th><th class="num">Amount</th><th>Reference / note</th><th></th></tr>
       @for (p of rows(); track p.id) {
         <tr><td>SP-{{ p.id.toString().padStart(6,'0') }}</td>
           <td>{{ p.received_at | date:'shortTime' }}</td>
           <td>{{ p.customer }}<br><small>{{ p.phone }}</small></td>
           <td>#{{ p.appointment_id }} · {{ p.start_at.replace('T',' ') }}</td>
           <td>{{ methodName(p.method) }}</td>
-          <td class="num">{{ p.amount | number:'1.2-2' }}</td>
-          <td class="num">{{ p.refunded_amount | number:'1.2-2' }}</td>
-          <td style="white-space:nowrap"><button class="s" (click)="receipt(p)">Receipt</button>
-            @if (auth.isAdmin() && p.amount > p.refunded_amount && refundId() !== p.id) {
+          <td class="num"><strong>{{ p.event_type === 'refund' ? '− ' : '' }}{{ p.amount | number:'1.2-2' }}</strong></td>
+          <td>{{ p.reference || p.note || '—' }}</td>
+          <td style="white-space:nowrap"><button class="s" (click)="receipt(p)">{{ p.event_type === 'refund' ? 'Original receipt' : 'Receipt' }}</button>
+            @if (p.event_type !== 'refund' && auth.isAdmin() && p.amount > p.refunded_amount && refundId() !== p.id) {
               <button class="s" (click)="beginRefund(p)">Refund</button>
             }</td></tr>
         @if (refundId() === p.id) {
@@ -131,7 +131,7 @@ export class Payments implements OnInit {
       const blob = await this.api.blob('/payments/'+p.id+'/receipt');
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href=url;
-      a.download = 'receipt_SP-'+p.id.toString().padStart(6,'0')+'.pdf'; a.click();
+      a.download = 'receipt_SP-'+(p.payment_id || p.id).toString().padStart(6,'0')+'.pdf'; a.click();
       URL.revokeObjectURL(url);
     } catch (e) { this.error.set(errorText(e)); }
   }

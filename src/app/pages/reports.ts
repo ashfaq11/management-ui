@@ -147,17 +147,18 @@ interface ShiftReport {
     </table></div>
   }
 
+  @if (shiftErr()) { <div class="msg">{{ shiftErr() }}</div> }
   @if (shiftReport(); as sh) {
     <h2 style="margin-top:24px">Therapist shift reporting</h2>
     <p style="color:var(--mut)">Weekly roster and service activity for {{ sh.from }} to {{ sh.to }}. Shift hours are configured under Therapists &amp; services.</p>
     <div class="grid">
-      <div><label>Shift templates</label><h2>{{ sh.summary.shift_templates }}</h2></div>
-      <div><label>Therapists assigned</label><h2>{{ sh.summary.assigned_therapists }}</h2></div>
-      <div><label>Weekly assignments</label><h2>{{ sh.summary.shift_assignments }}</h2></div>
-      <div><label>Appointments in shifts</label><h2>{{ sh.summary.appointments }}</h2></div>
-      <div><label>Completed appointments</label><h2>{{ sh.summary.completed }}</h2></div>
-      <div><label>Completed time</label><h2>{{ hrs(sh.summary.completed_minutes) }}</h2></div>
-      <div><label>Completed service value</label><h2>Rs {{ sh.summary.completed_revenue | number: '1.2-2' }}</h2></div>
+      <div class="kpi"><span>Shift templates</span><b>{{ sh.summary.shift_templates }}</b></div>
+      <div class="kpi"><span>Therapists assigned</span><b>{{ sh.summary.assigned_therapists }}</b></div>
+      <div class="kpi"><span>Weekly assignments</span><b>{{ sh.summary.shift_assignments }}</b></div>
+      <div class="kpi"><span>Appointments in shifts</span><b>{{ sh.summary.appointments }}</b></div>
+      <div class="kpi"><span>Completed appointments</span><b>{{ sh.summary.completed }}</b></div>
+      <div class="kpi"><span>Completed time</span><b>{{ hrs(sh.summary.completed_minutes) }}</b></div>
+      <div class="kpi"><span>Completed service value</span><b>Rs {{ sh.summary.completed_revenue | number: '1.2-2' }}</b></div>
     </div>
 
     <h3>Shift templates</h3>
@@ -198,7 +199,8 @@ export class Reports implements OnInit {
   therapists = signal<Therapist[]>([]); customers = signal<Customer[]>([]); services = signal<Service[]>([]);
   customerId: number | null = null; serviceId: number | null = null;
   busy = signal(false); sum = signal<Summary | null>(null); inc = signal<IncentiveReport | null>(null);
-  planReport = signal<PlanReport | null>(null); shiftReport = signal<ShiftReport | null>(null); err = signal('');
+  planReport = signal<PlanReport | null>(null); shiftReport = signal<ShiftReport | null>(null);
+  shiftErr = signal(''); err = signal('');
 
   async ngOnInit() {
     try {
@@ -212,12 +214,18 @@ export class Reports implements OnInit {
   async load() {
     if (this.mode === 'month' ? !this.month : !(this.from && this.to)) return;
     try {
-      const [s, i, p, sh] = await Promise.all([
+      const [s, i, p] = await Promise.all([
         this.api.get<Summary>('/reports/summary', this.query()),
         this.api.get<IncentiveReport>('/reports/incentives', { month: this.month }),
-        this.api.get<PlanReport>('/reports/plans', { ...this.period(), customer_id: this.customerId ?? undefined }),
-        this.api.get<ShiftReport>('/reports/shifts', { ...this.period(), therapist_id: this.therapistId ?? undefined })]);
-      this.sum.set(s); this.inc.set(i); this.planReport.set(p); this.shiftReport.set(sh); this.err.set('');
+        this.api.get<PlanReport>('/reports/plans', { ...this.period(), customer_id: this.customerId ?? undefined })]);
+      this.sum.set(s); this.inc.set(i); this.planReport.set(p); this.err.set('');
+      try {
+        const sh = await this.api.get<ShiftReport>('/reports/shifts', { ...this.period(), therapist_id: this.therapistId ?? undefined });
+        this.shiftReport.set(sh); this.shiftErr.set('');
+      } catch (e) {
+        this.shiftReport.set(null);
+        this.shiftErr.set('Shift reporting is unavailable until the backend shift update is deployed. Other reports are still available.');
+      }
     } catch (e) { this.err.set(errorText(e)); }
   }
 

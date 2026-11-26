@@ -77,13 +77,13 @@ import { thisMonth, today } from '../core/util';
   }
   @if (mode === 'month' && inc(); as i) {
     <h2 style="margin-top:16px">Therapist incentives</h2>
-    <div class="wrap"><table><tr><th>Therapist</th><th class="num">Services</th><th class="num">Revenue</th><th class="num">%</th><th class="num">Incentive</th></tr>
+    <div class="wrap"><table><tr><th>Therapist</th><th class="num">Services</th><th class="num">Revenue</th><th class="num">%</th><th class="num">Incentive</th><th class="num">Extra</th></tr>
     @for (x of incRows(i); track x.therapist_id) {
       <tr><td>{{ x.therapist }}</td><td class="num">{{ x.services_count }}</td><td class="num">{{ x.service_revenue | number: '1.2-2' }}</td>
-        <td class="num">{{ x.incentive_percent }}</td><td class="num">{{ x.incentive | number: '1.2-2' }}</td></tr>
+        <td class="num">{{ x.incentive_percent }}</td><td class="num">{{ x.incentive | number: '1.2-2' }}</td><td class="num">{{ x.extra_incentive | number: '1.2-2' }}</td></tr>
     }
     @if (therapistId == null) {
-      <tr><th colspan="4">Total incentive</th><th class="num">{{ i.total_incentive | number: '1.2-2' }}</th></tr>
+      <tr><th colspan="5">Total incentive (incl. extra)</th><th class="num">{{ i.total_incentive | number: '1.2-2' }}</th></tr>
     }</table></div>
   }</div>`,
 })

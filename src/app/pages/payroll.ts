@@ -12,13 +12,14 @@ import { thisMonth } from '../core/util';
     <input type="month" [ngModel]="month" (ngModelChange)="month = $event; load()"></div></div>
   <div class="wrap">
   @if (rep(); as i) {
-    <table><tr><th>Therapist</th><th class="num">Fixed</th><th class="num">Incentive</th><th class="num">Net pay</th><th></th></tr>
+    <table><tr><th>Therapist</th><th class="num">Fixed</th><th class="num">Incentive</th><th class="num">Extra</th><th class="num">Net pay</th><th></th></tr>
     @for (x of i.therapists; track x.therapist_id) {
       <tr><td>{{ x.therapist }}</td><td class="num">{{ x.fixed_salary | number: '1.2-2' }}</td><td class="num">{{ x.incentive | number: '1.2-2' }}</td>
+        <td class="num">{{ x.extra_incentive | number: '1.2-2' }}</td>
         <td class="num"><b>{{ x.net_pay | number: '1.2-2' }}</b></td>
         <td><button class="s" (click)="pdf(x.therapist_id, x.therapist)">Payslip PDF</button></td></tr>
     }
-    <tr><th colspan="3">Total payroll</th><th class="num">{{ i.total_payroll | number: '1.2-2' }}</th><th></th></tr></table>
+    <tr><th colspan="4">Total payroll</th><th class="num">{{ i.total_payroll | number: '1.2-2' }}</th><th></th></tr></table>
   }</div>
   @if (err()) { <div class="msg err">{{ err() }}</div> }</div>`,
 })

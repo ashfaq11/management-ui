@@ -3,12 +3,13 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
 import { Service, Therapist } from '../core/models';
+import { Bonuses } from './bonuses';
 
 const blankT = () => ({ name: '', phone: '', fixed_salary: 0, incentive_percent: 0 });
 const blankS = () => ({ name: '', price: 0, duration_min: 60 });
 
 @Component({
-  selector: 'app-staff', imports: [FormsModule, DecimalPipe],
+  selector: 'app-staff', imports: [FormsModule, DecimalPipe, Bonuses],
   template: `
   <div class="card"><h2>Therapists</h2>
     <div class="wrap"><table><tr><th>Name</th><th>Phone</th><th class="num">Fixed salary</th><th class="num">Incentive %</th><th>Active</th><th></th></tr>
@@ -46,7 +47,8 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
     <button class="p" (click)="saveS()">{{ sId() ? 'Save changes' : 'Add service' }}</button>
     @if (sId()) { <button class="s" style="margin-left:8px" (click)="resetS()">Cancel</button> }
     @if (sm()) { <div class="msg err">{{ sm() }}</div> }
-  </div>`,
+  </div>
+  <app-bonuses [therapists]="therapists()" />`,
 })
 export class Staff implements OnInit {
   private api = inject(Api);

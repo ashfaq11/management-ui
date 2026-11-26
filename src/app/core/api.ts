@@ -40,6 +40,9 @@ export class Api {
   patch<T>(path: string, body: unknown): Promise<T> {
     return firstValueFrom(this.http.patch<T>(config.apiBase + path, body));
   }
+  delete(path: string): Promise<unknown> {
+    return firstValueFrom(this.http.delete(config.apiBase + path));
+  }
   blob(path: string): Promise<Blob> {
     return firstValueFrom(this.http.get(config.apiBase + path, { responseType: 'blob' }));
   }

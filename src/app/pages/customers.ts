@@ -143,15 +143,16 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
       }
       @let rows = history(c);
       <p style="margin:8px 0;color:var(--mut)">{{ rows.length }} visit(s) &middot; completed total Rs {{ spent(rows) | number: '1.2-2' }}</p>
-      <div class="wrap"><table><tr><th>When</th><th>Service</th><th>Therapist</th><th class="num">Price</th><th>Status</th><th>Plan deduction</th></tr>
+      <div class="wrap"><table><tr><th>When</th><th>Service</th><th>Therapist</th><th class="num">Price</th><th>Appointment</th><th>Payment</th><th>Plan deduction</th></tr>
       @for (a of rows; track a.id) {
         <tr><td>{{ a.start_at.replace('T', ' ') }}</td><td>{{ a.service }}</td><td>{{ a.therapist }}</td>
           <td class="num">{{ a.price | number: '1.2-2' }}</td><td><span class="badge">{{ a.status }}</span></td>
+          <td><span class="badge">{{ paymentLabel(a) }}</span></td>
           <td>@if (a.plan_deducted != null && a.plan_unit) {
             {{ a.plan_name }} · {{ a.plan_unit === 'hours' ? (a.plan_deducted | number: '1.2-2') + ' hrs' : ('Rs ' + (a.plan_deducted | number: '1.2-2')) }}
             @if (a.plan_reversed_at) { <br><small>Reversed {{ when(a.plan_reversed_at) }}</small> }
           } @else { — }</td></tr>
-      } @empty { <tr><td colspan="6">No visits match.</td></tr> }
+      } @empty { <tr><td colspan="7">No visits match.</td></tr> }
       </table></div>
     </div>
   }`,
@@ -228,6 +229,10 @@ export class Customers implements OnInit {
   }
   clearSearch() { this.q=''; this.page.set(1); void this.load(); }
   async changePage(delta:number) { this.page.set(Math.max(1,this.page()+delta)); await this.load(); }
+  paymentLabel(a: import('../core/models').Appointment) {
+    if(a.payment_status==='prepaid') return a.plan_unit ? 'Plan · '+(a.plan_unit==='hours'?'Hours':'Rupees') : 'Plan redeemed';
+    return ({pending:'Pending',partial:'Partially paid',paid:'Paid'} as Record<string,string>)[a.payment_status ?? 'pending'];
+  }
   methodName(v?:string|null) {
     if(!v) return 'No preference';
     return ({cash:'Cash',upi:'UPI',card:'Card',bank_transfer:'Bank transfer',other:'Other'} as Record<string,string>)[v]??v;

@@ -24,6 +24,20 @@ interface PlanReport {
   redemptions: PlanRedemption[];
 }
 
+interface ShiftReport {
+  from: string; to: string;
+  summary: {
+    shift_templates: number; assigned_therapists: number; shift_assignments: number;
+    appointments: number; completed: number; completed_minutes: number; completed_revenue: number;
+  };
+  shifts: { id: number; name: string; start_time: string; end_time: string; is_active: boolean }[];
+  assignments: {
+    shift_id: number; shift_name: string; start_time: string; end_time: string; shift_is_active: boolean;
+    day_of_week: number; day_name: string; therapist_id: number; therapist: string;
+    appointment_count: number; completed_count: number; completed_minutes: number; completed_revenue: number;
+  }[];
+}
+
 @Component({
   selector: 'app-reports', imports: [FormsModule, DecimalPipe],
   template: `
@@ -133,6 +147,38 @@ interface PlanReport {
     </table></div>
   }
 
+  @if (shiftReport(); as sh) {
+    <h2 style="margin-top:24px">Therapist shift reporting</h2>
+    <p style="color:var(--mut)">Weekly roster and service activity for {{ sh.from }} to {{ sh.to }}. Shift hours are configured under Therapists &amp; services.</p>
+    <div class="grid">
+      <div><label>Shift templates</label><h2>{{ sh.summary.shift_templates }}</h2></div>
+      <div><label>Therapists assigned</label><h2>{{ sh.summary.assigned_therapists }}</h2></div>
+      <div><label>Weekly assignments</label><h2>{{ sh.summary.shift_assignments }}</h2></div>
+      <div><label>Appointments in shifts</label><h2>{{ sh.summary.appointments }}</h2></div>
+      <div><label>Completed appointments</label><h2>{{ sh.summary.completed }}</h2></div>
+      <div><label>Completed time</label><h2>{{ hrs(sh.summary.completed_minutes) }}</h2></div>
+      <div><label>Completed service value</label><h2>Rs {{ sh.summary.completed_revenue | number: '1.2-2' }}</h2></div>
+    </div>
+
+    <h3>Shift templates</h3>
+    <div class="wrap"><table><tr><th>Shift</th><th>Working hours</th><th>Status</th></tr>
+      @for (x of sh.shifts; track x.id) {
+        <tr><td><strong>{{ x.name }}</strong></td><td>{{ x.start_time.slice(0,5) }} – {{ x.end_time.slice(0,5) }}</td>
+          <td>{{ x.is_active ? 'Active' : 'Inactive' }}</td></tr>
+      } @empty { <tr><td colspan="3">No shift templates created yet.</td></tr> }
+    </table></div>
+
+    <h3 style="margin-top:16px">Weekly roster and shift performance</h3>
+    <div class="wrap"><table><tr><th>Day</th><th>Therapist</th><th>Shift</th><th>Hours</th><th class="num">Appointments</th><th class="num">Completed</th><th class="num">Time delivered</th><th class="num">Value</th></tr>
+      @for (x of sh.assignments; track x.shift_id + '-' + x.therapist_id + '-' + x.day_of_week) {
+        <tr><td><strong>{{ x.day_name }}</strong></td><td>{{ x.therapist }}</td><td>{{ x.shift_name }}</td>
+          <td>{{ x.start_time.slice(0,5) }}–{{ x.end_time.slice(0,5) }}</td>
+          <td class="num">{{ x.appointment_count }}</td><td class="num">{{ x.completed_count }}</td>
+          <td class="num">{{ hrs(x.completed_minutes) }}</td><td class="num">Rs {{ x.completed_revenue | number: '1.2-2' }}</td></tr>
+      } @empty { <tr><td colspan="8">No weekly therapist shifts assigned.</td></tr> }
+    </table></div>
+  }
+
   @if (mode === 'month' && inc(); as i) {
     <h2 style="margin-top:16px">Therapist incentives</h2>
     <div class="wrap"><table><tr><th>Therapist</th><th class="num">Services</th><th class="num">Revenue</th><th class="num">%</th><th class="num">Incentive</th><th class="num">Extra</th></tr>
@@ -152,7 +198,7 @@ export class Reports implements OnInit {
   therapists = signal<Therapist[]>([]); customers = signal<Customer[]>([]); services = signal<Service[]>([]);
   customerId: number | null = null; serviceId: number | null = null;
   busy = signal(false); sum = signal<Summary | null>(null); inc = signal<IncentiveReport | null>(null);
-  planReport = signal<PlanReport | null>(null); err = signal('');
+  planReport = signal<PlanReport | null>(null); shiftReport = signal<ShiftReport | null>(null); err = signal('');
 
   async ngOnInit() {
     try {
@@ -166,11 +212,12 @@ export class Reports implements OnInit {
   async load() {
     if (this.mode === 'month' ? !this.month : !(this.from && this.to)) return;
     try {
-      const [s, i, p] = await Promise.all([
+      const [s, i, p, sh] = await Promise.all([
         this.api.get<Summary>('/reports/summary', this.query()),
         this.api.get<IncentiveReport>('/reports/incentives', { month: this.month }),
-        this.api.get<PlanReport>('/reports/plans', { ...this.period(), customer_id: this.customerId ?? undefined })]);
-      this.sum.set(s); this.inc.set(i); this.planReport.set(p); this.err.set('');
+        this.api.get<PlanReport>('/reports/plans', { ...this.period(), customer_id: this.customerId ?? undefined }),
+        this.api.get<ShiftReport>('/reports/shifts', { ...this.period(), therapist_id: this.therapistId ?? undefined })]);
+      this.sum.set(s); this.inc.set(i); this.planReport.set(p); this.shiftReport.set(sh); this.err.set('');
     } catch (e) { this.err.set(errorText(e)); }
   }
 

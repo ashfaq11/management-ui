@@ -1,12 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
+import { WhenPicker } from '../shared/when-picker';
 import { Service, Therapist } from '../core/models';
 
 const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', address: '', notes: '' });
 
 @Component({
-  selector: 'app-onboarding', imports: [FormsModule],
+  selector: 'app-onboarding', imports: [FormsModule, WhenPicker],
   template: `
   <div class="card"><h2>Onboard new customer</h2>
     <div class="grid">
@@ -24,8 +25,9 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
         @for (t of therapists(); track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }</select></div>
       <div><label>Service</label><select [(ngModel)]="service_id">
         @for (s of services(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select></div>
-      <div><label>Start</label><input type="datetime-local" [(ngModel)]="start_at"></div>
     </div>
+    <app-when-picker [(value)]="start_at" [therapistId]="therapist_id" [durationMin]="duration()" />
+    <small>Leave the time empty to register the customer without an appointment.</small><br>
     <button class="p" (click)="save()">Register customer</button>
     @if (msg()) { <div class="msg" [class.err]="isErr()">{{ msg() }}</div> }
   </div>`,
@@ -41,6 +43,8 @@ export class Onboarding implements OnInit {
     this.therapists.set(t.filter((x) => x.is_active)); this.services.set(s.filter((x) => x.is_active));
     this.therapist_id = this.therapists()[0]?.id; this.service_id = this.services()[0]?.id;
   }
+
+  duration() { return this.services().find((x) => x.id === this.service_id)?.duration_min ?? 60; }
 
   async save() {
     try {

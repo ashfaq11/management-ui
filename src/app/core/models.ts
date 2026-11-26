@@ -21,10 +21,15 @@ export interface Payslip {
   service_revenue: number; incentive_percent: number; incentive: number; net_pay: number;
 }
 export interface IncentiveReport { month: string; therapists: Payslip[]; total_incentive: number; total_payroll: number; }
+export interface ServiceTotal { service: string; count: number; revenue: number; }
 export interface Summary {
-  month: string; revenue: number; new_customers: number;
+  month: string; therapist_id: number | null; revenue: number; services_count: number; new_customers: number;
   by_status: { status: string; count: number; amount: number }[];
-  by_service: { service: string; count: number; revenue: number }[];
+  by_service: ServiceTotal[];
+  /** Completed services per therapist, with a per-service breakdown. */
+  by_therapist: { therapist_id: number; therapist: string; count: number; revenue: number; services: ServiceTotal[] }[];
+  /** Every completed service in the month: the revenue, line by line. */
+  lines: { id: number; start_at: string; price: number; customer: string; service: string; therapist_id: number; therapist: string }[];
 }
 
 export interface User { id: number; username: string; role: 'admin' | 'staff'; is_active: boolean; }

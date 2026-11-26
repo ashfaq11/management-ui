@@ -18,6 +18,9 @@ import { today } from '../core/util';
       <div><label>Service</label><select [(ngModel)]="f.service_id">
         @for (s of services(); track s.id) { <option [ngValue]="s.id">{{ s.name }} (Rs {{ s.price }})</option> }</select></div>
       <div><label>{{ editId() ? "Price (blank = keep, or list price if service changed)" : "Price override (optional)" }}</label><input type="number" min="0" [(ngModel)]="f.price"></div>
+      <div><label>Duration (min) &middot; blank = {{ editId() ? "keep" : "service default " + serviceMinutes() }}</label>
+        <input type="number" min="5" max="720" step="5" [(ngModel)]="f.duration_min"
+          [placeholder]="'' + serviceMinutes()"></div>
       <div><label>Notes</label><input [(ngModel)]="f.notes"></div>
     </div>
     <app-when-picker [(value)]="f.start_at" [therapistId]="f.therapist_id" [durationMin]="duration()"
@@ -55,8 +58,8 @@ export class Appointments implements OnInit {
   rows = signal<Appointment[]>([]); day = signal(today());
   msg = signal(''); isErr = signal(false);
   editId = signal<number | null>(null);
-  f: { customer_id?: number; therapist_id?: number; service_id?: number; start_at: string; price: number | null; notes: string | null } =
-    { start_at: '', price: null, notes: null };
+  f: { customer_id?: number; therapist_id?: number; service_id?: number; start_at: string; price: number | null; duration_min: number | null; notes: string | null } =
+    { start_at: '', price: null, duration_min: null, notes: null };
 
   async ngOnInit() {
     const [c, t, s] = await Promise.all([this.api.get<Customer[]>('/customers'),
@@ -69,7 +72,9 @@ export class Appointments implements OnInit {
 
   todayStr = today;
   /** The chosen service's length, so the free-time buttons fit it. */
-  duration() { return this.services().find((x) => x.id === this.f.service_id)?.duration_min ?? 60; }
+  serviceMinutes() { return this.services().find((x) => x.id === this.f.service_id)?.duration_min ?? 60; }
+  /** The length the free-time buttons must fit: the override if given, else the service's. */
+  duration() { return this.f.duration_min || this.serviceMinutes(); }
   moveDay(n: number) {
     const d = new Date(this.day() + 'T12:00:00'); d.setDate(d.getDate() + n);
     this.day.set(d.toISOString().slice(0, 10)); void this.load();
@@ -82,6 +87,7 @@ export class Appointments implements OnInit {
       if (!this.f.start_at) throw new Error('Pick a date and a time');
       const body: Record<string, unknown> = { ...this.f };
       if (body['price'] === null || body['price'] === '') delete body['price'];
+      if (!body['duration_min']) delete body['duration_min'];
       if (!body['notes']) body['notes'] = null;
       const id = this.editId();
       if (id) await this.api.put(`/appointments/${id}`, body); else await this.api.post('/appointments', body);
@@ -93,12 +99,12 @@ export class Appointments implements OnInit {
   edit(a: Appointment) {
     this.editId.set(a.id);
     this.f = { customer_id: a.customer_id, therapist_id: a.therapist_id, service_id: a.service_id,
-      start_at: a.start_at, price: null, notes: a.notes ?? null };
+      start_at: a.start_at, price: null, duration_min: a.duration_min, notes: a.notes ?? null };
     this.msg.set('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  cancelEdit() { this.editId.set(null); this.f = { ...this.f, start_at: '', price: null, notes: null }; }
+  cancelEdit() { this.editId.set(null); this.f = { ...this.f, start_at: '', price: null, duration_min: null, notes: null }; }
 
   async setStatus(a: Appointment, status: Status) {
     try { await this.api.patch(`/appointments/${a.id}/status`, { status }); }

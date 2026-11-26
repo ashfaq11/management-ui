@@ -33,8 +33,8 @@ import { thisMonth } from '../core/util';
     <h3 style="margin-top:16px">By therapist</h3>
     <div class="wrap"><table><tr><th>Therapist / service</th><th class="num">Done</th><th class="num">Amount</th></tr>
     @for (t of s.by_therapist; track t.therapist_id) {
-      <tr><th style="text-align:left;color:inherit">{{ t.therapist }}</th><th class="num">{{ t.count }}</th>
-        <th class="num">{{ t.revenue | number: '1.2-2' }}</th></tr>
+      <tr style="font-weight:700;background:var(--acc-soft)"><td>{{ t.therapist }}</td><td class="num">{{ t.count }}</td>
+        <td class="num">{{ t.revenue | number: '1.2-2' }}</td></tr>
       @for (x of t.services; track x.service) {
         <tr><td style="padding-left:20px">{{ x.service }}</td><td class="num">{{ x.count }}</td>
           <td class="num">{{ x.revenue | number: '1.2-2' }}</td></tr>

@@ -25,6 +25,8 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
         @for (t of therapists(); track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }</select></div>
       <div><label>Service</label><select [(ngModel)]="service_id">
         @for (s of services(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select></div>
+      <div><label>Duration (min) &middot; blank = service default {{ serviceMinutes() }}</label>
+        <input type="number" min="5" max="720" step="5" [(ngModel)]="duration_min" [placeholder]="'' + serviceMinutes()"></div>
     </div>
     <app-when-picker [(value)]="start_at" [therapistId]="therapist_id" [durationMin]="duration()" />
     <small>Leave the time empty to register the customer without an appointment.</small><br>
@@ -36,7 +38,7 @@ export class Onboarding implements OnInit {
   private api = inject(Api);
   therapists = signal<Therapist[]>([]); services = signal<Service[]>([]);
   msg = signal(''); isErr = signal(false);
-  c = blank(); therapist_id?: number; service_id?: number; start_at = '';
+  c = blank(); therapist_id?: number; service_id?: number; start_at = ''; duration_min: number | null = null;
 
   async ngOnInit() {
     const [t, s] = await Promise.all([this.api.get<Therapist[]>('/therapists'), this.api.get<Service[]>('/services')]);
@@ -44,18 +46,20 @@ export class Onboarding implements OnInit {
     this.therapist_id = this.therapists()[0]?.id; this.service_id = this.services()[0]?.id;
   }
 
-  duration() { return this.services().find((x) => x.id === this.service_id)?.duration_min ?? 60; }
+  serviceMinutes() { return this.services().find((x) => x.id === this.service_id)?.duration_min ?? 60; }
+  duration() { return this.duration_min || this.serviceMinutes(); }
 
   async save() {
     try {
       const body: Record<string, unknown> = { name: this.c.name.trim(), phone: this.c.phone.trim() };
       for (const k of ['email', 'gender', 'dob', 'address', 'notes'] as const) body[k] = this.c[k] || null;
       if (this.start_at) {
-        body['first_appointment'] = { customer_id: 0, therapist_id: this.therapist_id, service_id: this.service_id, start_at: this.start_at };
+        body['first_appointment'] = { customer_id: 0, therapist_id: this.therapist_id, service_id: this.service_id, start_at: this.start_at,
+          ...(this.duration_min ? { duration_min: this.duration_min } : {}) };
       }
       const r = await this.api.post<{ customer_id: number; appointment_id: number | null }>('/onboarding', body);
       this.msg.set(`Registered customer #${r.customer_id}` + (r.appointment_id ? ' with first appointment booked' : ''));
-      this.isErr.set(false); this.c = blank(); this.start_at = '';
+      this.isErr.set(false); this.c = blank(); this.start_at = ''; this.duration_min = null;
     } catch (e) { this.msg.set(errorText(e)); this.isErr.set(true); }
   }
 }

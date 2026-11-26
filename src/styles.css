@@ -1,14 +1,55 @@
-:root{--bg:#f6f4ef;--card:#fff;--ink:#222;--mut:#6b6b6b;--acc:#2f5d50;--line:#e3dfd6;--bad:#b3261e}
-@media(prefers-color-scheme:dark){:root{--bg:#171a19;--card:#202523;--ink:#eee;--mut:#9aa;--acc:#6fb59f;--line:#333b38;--bad:#f2b8b5}}
-*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;background:var(--bg);color:var(--ink)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
-h2{margin:0 0 10px;font-size:18px}label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}
-input,select,textarea{width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 12px}
-button.p{background:var(--acc);color:#fff;border:0;padding:9px 14px;border-radius:6px;cursor:pointer;font:inherit;margin-top:12px}
-button.p:disabled{opacity:.6;cursor:default}
-button.s{background:transparent;border:1px solid var(--line);color:var(--ink);padding:4px 8px;border-radius:6px;cursor:pointer;font:inherit}
-table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);font-size:14px}
-th{color:var(--mut);font-weight:500}.num{text-align:right}.msg{margin:8px 0;color:var(--acc)}.msg.err{color:var(--bad)}
-.wrap{overflow-x:auto}.row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.row>div{flex:1;min-width:140px}
-.badge{padding:2px 8px;border-radius:99px;background:var(--line);font-size:12px}
+/* Spa Manager: calm sage + sand palette, soft cards, comfortable touch targets. */
+:root{
+  --bg:#f5f2ec;--card:#fff;--ink:#1f2a27;--mut:#6c7a75;--acc:#2f5d50;--acc-2:#3f7a69;--acc-soft:#e4efe9;
+  --gold:#b8915a;--line:#e6e1d7;--bad:#b3261e;--bad-soft:#fbe9e7;--ok:#2e7d4f;
+  --radius:14px;--shadow:0 1px 2px rgba(31,42,39,.05),0 6px 20px rgba(31,42,39,.06);
+  color-scheme:light;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#141816;--card:#1d2321;--ink:#eef2f0;--mut:#9aaba5;--acc:#6fb59f;--acc-2:#86c7b2;--acc-soft:#22302b;
+  --gold:#d4b27e;--line:#2d3632;--bad:#f2b8b5;--bad-soft:#3a1f1d;--ok:#8fd3a8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);color-scheme:dark}}
+
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;background:var(--bg);color:var(--ink);
+  -webkit-font-smoothing:antialiased}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px;
+  box-shadow:var(--shadow)}
+h2{margin:0 0 12px;font-size:19px;font-weight:650;letter-spacing:-.01em}
+h3{margin:18px 0 8px;font-size:14px;font-weight:650;color:var(--acc);text-transform:uppercase;letter-spacing:.06em}
+label{display:block;font-size:12px;font-weight:600;color:var(--mut);margin:12px 0 5px;letter-spacing:.02em}
+small{color:var(--mut)}
+a{color:var(--acc)}
+
+input,select,textarea{width:100%;min-height:42px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;
+  background:var(--card);color:var(--ink);font:inherit;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+textarea{min-height:auto}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 14px}
+.row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.row>div{flex:1;min-width:150px}
+
+button{font:inherit;cursor:pointer;transition:background .15s,border-color .15s,transform .05s}
+button:active:not(:disabled){transform:translateY(1px)}
+button.p{background:var(--acc);color:#fff;border:0;min-height:42px;padding:10px 18px;border-radius:10px;font-weight:600;
+  margin-top:14px;box-shadow:0 2px 8px rgba(47,93,80,.25)}
+button.p:hover:not(:disabled){background:var(--acc-2)}
+button.p:disabled{opacity:.55;cursor:default;box-shadow:none}
+button.s{background:var(--card);border:1px solid var(--line);color:var(--ink);min-height:36px;padding:6px 12px;border-radius:9px}
+button.s:hover:not(:disabled){border-color:var(--acc);color:var(--acc)}
+button:disabled{cursor:default}
+
+table{width:100%;border-collapse:separate;border-spacing:0}
+th,td{text-align:left;padding:10px 10px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:middle}
+th{color:var(--mut);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em;background:var(--bg)}
+tr:first-child th:first-child{border-top-left-radius:10px}tr:first-child th:last-child{border-top-right-radius:10px}
+tr:hover td{background:var(--acc-soft)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+.wrap table tr:last-child td,.wrap table tr:last-child th{border-bottom:0}
+
+.msg{margin:10px 0;padding:9px 12px;border-radius:10px;background:var(--acc-soft);color:var(--acc);font-weight:500}
+.msg.err{background:var(--bad-soft);color:var(--bad)}
+.badge{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--acc-soft);color:var(--acc);font-size:12px;font-weight:600}
+.wrap>p{margin:0;padding:14px;color:var(--mut)}

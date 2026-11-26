@@ -89,11 +89,15 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
       }
       @let rows = history(c);
       <p style="margin:8px 0;color:var(--mut)">{{ rows.length }} visit(s) &middot; completed total Rs {{ spent(rows) | number: '1.2-2' }}</p>
-      <div class="wrap"><table><tr><th>When</th><th>Service</th><th>Therapist</th><th class="num">Price</th><th>Status</th></tr>
+      <div class="wrap"><table><tr><th>When</th><th>Service</th><th>Therapist</th><th class="num">Price</th><th>Status</th><th>Plan deduction</th></tr>
       @for (a of rows; track a.id) {
         <tr><td>{{ a.start_at.replace('T', ' ') }}</td><td>{{ a.service }}</td><td>{{ a.therapist }}</td>
-          <td class="num">{{ a.price | number: '1.2-2' }}</td><td><span class="badge">{{ a.status }}</span></td></tr>
-      } @empty { <tr><td colspan="5">No visits match.</td></tr> }
+          <td class="num">{{ a.price | number: '1.2-2' }}</td><td><span class="badge">{{ a.status }}</span></td>
+          <td>@if (a.plan_deducted != null && a.plan_unit) {
+            {{ a.plan_name }} · {{ a.plan_unit === 'hours' ? (a.plan_deducted | number: '1.2-2') + ' hrs' : ('Rs ' + (a.plan_deducted | number: '1.2-2')) }}
+            @if (a.plan_reversed_at) { <br><small>Reversed {{ when(a.plan_reversed_at) }}</small> }
+          } @else { — }</td></tr>
+      } @empty { <tr><td colspan="6">No visits match.</td></tr> }
       </table></div>
     </div>
   }`,
@@ -121,6 +125,10 @@ export class Customers implements OnInit {
   }
   spent(rows: { status: string; price: number }[]) {
     return rows.filter((a) => a.status === 'completed').reduce((s, a) => s + Number(a.price), 0);
+  }
+  when(v: string): string {
+    const d = new Date(v);
+    return isNaN(+d) ? v : d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
   }
   availableBalance(c: Customer, type: 'hours' | 'rupees') {
     const today = today();

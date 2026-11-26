@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
-import { Service, Therapist } from '../core/models';
+import { Service, Shift, ShiftAssignment, Therapist } from '../core/models';
 import { Bonuses } from './bonuses';
 
 const DETAILS = ['email', 'gender', 'dob', 'address', 'specialities', 'experience_years', 'notes', 'emergency_name',
@@ -17,6 +17,14 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
 
 @Component({
   selector: 'app-staff', imports: [FormsModule, DecimalPipe, Bonuses],
+  styles: [`
+    .shift-intro{color:var(--mut);margin:-4px 0 16px;max-width:720px;line-height:1.5}
+    .shift-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end}
+    .shift-form button{min-height:42px}
+    .shift-day{font-weight:600;color:var(--acc)}
+    .shift-subtle{font-size:12px;color:var(--mut)}
+    .shift-empty{padding:16px;border:1px dashed var(--line);border-radius:12px;color:var(--mut);background:var(--surface)}
+  `],
   template: `
   <div class="page-head"><div><h1>Therapists &amp; services</h1><p>Your team, their profiles, and the treatments you offer.</p></div></div>
   <div class="card"><h2>Therapists</h2>
@@ -71,6 +79,63 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
     @if (tId()) { <button class="s" style="margin-left:8px" (click)="resetT()">Cancel</button> }
     @if (tm()) { <div class="msg err">{{ tm() }}</div> }
   </div>
+  <div class="card">
+    <div class="row" style="align-items:center;justify-content:space-between">
+      <div><h2 style="margin:0">Shift schedules</h2><p class="shift-intro">Create reusable working hours, then assign each therapist a shift for each day of the week. Appointments are restricted to the assigned shift.</p></div>
+      <span class="badge">{{ shifts().length }} shift(s)</span>
+    </div>
+    <h3>{{ shiftId() ? 'Edit shift' : 'Create shift' }}</h3>
+    <div class="shift-form">
+      <div><label>Shift name</label><input [(ngModel)]="shiftForm.name" placeholder="e.g. Morning"></div>
+      <div><label>Start time</label><input type="time" [(ngModel)]="shiftForm.start_time"></div>
+      <div><label>End time</label><input type="time" [(ngModel)]="shiftForm.end_time"></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="p" (click)="saveShift()">{{ shiftId() ? 'Save shift' : 'Add shift' }}</button>
+        @if (shiftId()) { <button class="s" (click)="resetShift()">Cancel</button> }
+      </div>
+    </div>
+    @if (shiftMsg()) { <div class="msg" [class.err]="shiftErr()">{{ shiftMsg() }}</div> }
+    @if (shifts().length) {
+      <div class="wrap" style="margin-top:14px"><table>
+        <tr><th>Shift</th><th>Working hours</th><th>Status</th><th></th></tr>
+        @for (x of shifts(); track x.id) {
+          <tr><td><strong>{{ x.name }}</strong></td><td>{{ x.start_time.slice(0,5) }} – {{ x.end_time.slice(0,5) }}</td>
+            <td><span class="badge">{{ x.is_active ? 'Active' : 'Inactive' }}</span></td>
+            <td><button class="s" (click)="editShift(x)">Edit</button>
+              <button class="s" style="margin-left:6px" (click)="toggleShift(x)">{{ x.is_active ? 'Deactivate' : 'Activate' }}</button></td></tr>
+        }
+      </table></div>
+    } @else { <div class="shift-empty">No shifts yet. Add your first shift above, such as Morning (09:00–17:00) or Evening (13:00–21:00).</div> }
+
+    <h3 style="margin-top:22px">Assign shifts to therapists</h3>
+    <p class="shift-subtle">Choose a therapist, a shift, and a weekday. Assigning again for the same weekday replaces the current shift.</p>
+    <div class="shift-form">
+      <div><label>Therapist</label><select [(ngModel)]="assignmentForm.therapist_id">
+        <option [ngValue]="null">Choose therapist</option>
+        @for (x of therapists(); track x.id) { @if (x.is_active) { <option [ngValue]="x.id">{{ x.name }}</option> } }
+      </select></div>
+      <div><label>Shift</label><select [(ngModel)]="assignmentForm.shift_id">
+        <option [ngValue]="null">Choose shift</option>
+        @for (x of shifts(); track x.id) { @if (x.is_active) { <option [ngValue]="x.id">{{ x.name }} ({{ x.start_time.slice(0,5) }}–{{ x.end_time.slice(0,5) }})</option> } }
+      </select></div>
+      <div><label>Weekday</label><select [(ngModel)]="assignmentForm.day_of_week">
+        @for (d of weekdays; track d.id) { <option [ngValue]="d.id">{{ d.name }}</option> }
+      </select></div>
+      <div><button class="p" (click)="assignShift()">Assign / update shift</button></div>
+    </div>
+    @if (assignmentMsg()) { <div class="msg" [class.err]="assignmentErr()">{{ assignmentMsg() }}</div> }
+    @if (assignments().length) {
+      <div class="wrap" style="margin-top:14px"><table>
+        <tr><th>Therapist</th><th>Day</th><th>Shift</th><th>Working hours</th><th>Status</th><th></th></tr>
+        @for (x of assignments(); track x.id) {
+          <tr><td><strong>{{ x.therapist }}</strong></td><td class="shift-day">{{ dayName(x.day_of_week) }}</td>
+            <td>{{ x.shift_name }}</td><td>{{ x.start_time.slice(0,5) }} – {{ x.end_time.slice(0,5) }}</td>
+            <td><span class="badge">{{ x.shift_is_active ? 'Active' : 'Inactive' }}</span></td>
+            <td><button class="s" (click)="removeAssignment(x)">Remove</button></td></tr>
+        }
+      </table></div>
+    } @else { <div class="shift-empty">No therapist shifts assigned. Therapists without a weekly roster keep the default 09:00–21:00 booking window.</div> }
+  </div>
   <div class="card"><h2>Services</h2>
     <div class="wrap"><table><tr><th>Name</th><th class="num">Price</th><th class="num">Minutes</th><th>Active</th><th></th></tr>
     @for (x of services(); track x.id) {
@@ -95,6 +160,15 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
 export class Staff implements OnInit {
   private api = inject(Api);
   therapists = signal<Therapist[]>([]); services = signal<Service[]>([]);
+  shifts = signal<Shift[]>([]); assignments = signal<ShiftAssignment[]>([]);
+  shiftId = signal<number | null>(null);
+  shiftMsg = signal(''); shiftErr = signal(false);
+  assignmentMsg = signal(''); assignmentErr = signal(false);
+  shiftForm = { name: '', start_time: '09:00', end_time: '17:00', is_active: true };
+  assignmentForm: { therapist_id: number | null; shift_id: number | null; day_of_week: number } =
+    { therapist_id: null, shift_id: null, day_of_week: 0 };
+  weekdays = [{id:0,name:'Monday'},{id:1,name:'Tuesday'},{id:2,name:'Wednesday'},{id:3,name:'Thursday'},
+    {id:4,name:'Friday'},{id:5,name:'Saturday'},{id:6,name:'Sunday'}];
   viewId = signal<number | null>(null);
   tm = signal(''); sm = signal(''); tId = signal<number | null>(null); sId = signal<number | null>(null);
   t = blankT(); s = blankS();
@@ -102,8 +176,10 @@ export class Staff implements OnInit {
 
   async ngOnInit() { await this.reload(); }
   async reload() {
-    const [t, s] = await Promise.all([this.api.get<Therapist[]>('/therapists'), this.api.get<Service[]>('/services')]);
-    this.therapists.set(t); this.services.set(s);
+    const [t, s, sh, a] = await Promise.all([
+      this.api.get<Therapist[]>('/therapists'), this.api.get<Service[]>('/services'),
+      this.api.get<Shift[]>('/shifts'), this.api.get<ShiftAssignment[]>('/shift-assignments')]);
+    this.therapists.set(t); this.services.set(s); this.shifts.set(sh); this.assignments.set(a);
   }
 
   editT(x: Therapist) {
@@ -134,6 +210,56 @@ export class Staff implements OnInit {
   async toggleT(x: Therapist) {
     try { await this.api.put(`/therapists/${x.id}`, { ...x, is_active: !x.is_active }); } catch (e) { this.tm.set(errorText(e)); }
     await this.reload();
+  }
+
+  dayName(day: number) { return this.weekdays.find((x) => x.id === day)?.name ?? '—'; }
+  resetShift() {
+    this.shiftId.set(null);
+    this.shiftForm = { name: '', start_time: '09:00', end_time: '17:00', is_active: true };
+    this.shiftMsg.set('');
+  }
+  editShift(x: Shift) {
+    this.shiftId.set(x.id);
+    this.shiftForm = { name: x.name, start_time: x.start_time.slice(0,5), end_time: x.end_time.slice(0,5), is_active: x.is_active };
+    this.shiftMsg.set('');
+  }
+  async saveShift() {
+    if (!this.shiftForm.name.trim() || !this.shiftForm.start_time || !this.shiftForm.end_time
+        || this.shiftForm.end_time <= this.shiftForm.start_time) {
+      this.shiftErr.set(true); this.shiftMsg.set('Enter a shift name and a valid same-day start/end time.'); return;
+    }
+    try {
+      const id = this.shiftId();
+      if (id) await this.api.put('/shifts/' + id, this.shiftForm);
+      else await this.api.post('/shifts', this.shiftForm);
+      this.shiftErr.set(false); this.shiftMsg.set(id ? 'Shift updated.' : 'Shift created.');
+      this.resetShift(); await this.reload();
+    } catch (e) { this.shiftErr.set(true); this.shiftMsg.set(errorText(e)); }
+  }
+  async toggleShift(x: Shift) {
+    try {
+      await this.api.put('/shifts/' + x.id, { name:x.name, start_time:x.start_time.slice(0,5),
+        end_time:x.end_time.slice(0,5), is_active:!x.is_active });
+      await this.reload();
+    } catch (e) { this.shiftErr.set(true); this.shiftMsg.set(errorText(e)); }
+  }
+  async assignShift() {
+    const a = this.assignmentForm;
+    if (!a.therapist_id || !a.shift_id) {
+      this.assignmentErr.set(true); this.assignmentMsg.set('Choose a therapist, a shift, and a weekday.'); return;
+    }
+    try {
+      await this.api.post('/shift-assignments', a);
+      this.assignmentErr.set(false); this.assignmentMsg.set('Weekly shift assigned.');
+      await this.reload();
+    } catch (e) { this.assignmentErr.set(true); this.assignmentMsg.set(errorText(e)); }
+  }
+  async removeAssignment(x: ShiftAssignment) {
+    try {
+      await this.api.delete('/shift-assignments/' + x.id);
+      this.assignmentMsg.set('Shift assignment removed.'); this.assignmentErr.set(false);
+      await this.reload();
+    } catch (e) { this.assignmentMsg.set(errorText(e)); this.assignmentErr.set(true); }
   }
 
   editS(x: Service) {

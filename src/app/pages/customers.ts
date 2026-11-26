@@ -37,6 +37,26 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
         <h2>{{ c.name }} <button class="s" style="margin-left:8px" (click)="startEdit(c)">Edit</button></h2>
         <p>{{ c.phone }} {{ c.email }}<br>{{ c.notes }}</p>
       }
+      <h3>Prepaid plans</h3>
+      <div class="wrap"><table><tr><th>Plan</th><th>Unit</th><th>Purchased</th><th>Balance</th><th>Expires</th></tr>
+        @for (p of (c.plans ?? []); track p.id) {
+          <tr><td>{{ p.name }}</td><td>{{ p.plan_type === 'hours' ? 'Hours' : 'Rupees' }}</td>
+            <td>{{ p.purchased_amount | number: '1.2-2' }}</td>
+            <td><strong>{{ p.balance | number: '1.2-2' }}</strong></td><td>{{ p.expires_on || 'Never' }}</td></tr>
+        } @empty { <tr><td colspan="5">No prepaid plans yet.</td></tr> }
+      </table></div>
+      <h4>Add plan / package</h4>
+      <div class="grid">
+        <div><label>Plan name *</label><input [(ngModel)]="planForm.name" placeholder="e.g. 10 hour package"></div>
+        <div><label>Balance type</label><select [(ngModel)]="planForm.plan_type">
+          <option value="hours">Hours</option><option value="rupees">Rupees (INR)</option></select></div>
+        <div><label>{{ planForm.plan_type === 'hours' ? 'Hours purchased' : 'Rupees purchased' }} *</label>
+          <input type="number" min="0.01" step="0.01" [(ngModel)]="planForm.amount"></div>
+        <div><label>Expiry date (optional)</label><input type="date" [(ngModel)]="planForm.expires_on"></div>
+      </div>
+      <label>Plan notes</label><input [(ngModel)]="planForm.notes" placeholder="Optional package details">
+      <button class="p" style="margin-top:8px" (click)="addPlan(c.id)">Add customer plan</button>
+      @if (planMsg()) { <div class="msg" [class.err]="planErr()">{{ planMsg() }}</div> }
       <h3>History</h3>
       <div class="grid">
         <div><label>From</label><input type="date" [(ngModel)]="hf.from"></div>
@@ -68,6 +88,8 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
 export class Customers implements OnInit {
   private api = inject(Api);
   form: Edit | null = null; formErr = signal('');
+  planForm = { name: '', plan_type: 'hours' as 'hours' | 'rupees', amount: 0, expires_on: '', notes: '' };
+  planMsg = signal(''); planErr = signal(false);
   q = ''; list = signal<Customer[]>([]); sel = signal<Customer | null>(null); err = signal('');
   hf = { from: '', to: '', therapist: '', service: '', status: '' };
   ngOnInit() { return this.load(); }
@@ -94,6 +116,21 @@ export class Customers implements OnInit {
   async open(id: number) {
     this.form = null; this.clearHist();
     try { this.sel.set(await this.api.get<Customer>(`/customers/${id}`)); } catch (e) { this.err.set(errorText(e)); }
+  }
+  async addPlan(id: number) {
+    const p = this.planForm;
+    if (!p.name.trim() || !(Number(p.amount) > 0)) {
+      this.planErr.set(true); this.planMsg.set('Enter a plan name and an amount greater than zero.'); return;
+    }
+    try {
+      await this.api.post('/customers/' + id + '/plans', {
+        name: p.name.trim(), plan_type: p.plan_type, amount: Number(p.amount),
+        expires_on: p.expires_on || null, notes: p.notes.trim() || null,
+      });
+      this.planErr.set(false); this.planMsg.set('Plan added.');
+      this.planForm = { name: '', plan_type: 'hours', amount: 0, expires_on: '', notes: '' };
+      await this.open(id);
+    } catch (e) { this.planErr.set(true); this.planMsg.set(errorText(e)); }
   }
   startEdit(c: Customer) {
     this.formErr.set('');

@@ -20,6 +20,10 @@ import { DashboardData } from '../core/models';
     .quick a:hover{border-color:var(--acc);background:var(--acc-soft)}
     .appt{display:grid;grid-template-columns:74px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
     .appt:last-child{border-bottom:0}.time{font-weight:750;color:var(--acc);font-variant-numeric:tabular-nums}
+    .trend{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end;margin-top:12px}
+    .trend-item{text-align:center;min-width:0}.bar-track{height:112px;background:var(--bg);border-radius:8px 8px 3px 3px;display:flex;align-items:end;overflow:hidden}
+    .bar{width:100%;background:linear-gradient(180deg,var(--acc-2),var(--acc));border-radius:7px 7px 0 0;min-height:2px}
+    .trend-item b{display:block;font-size:12px;margin-top:6px}.trend-item small{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .appt small{display:block}.pill{font-size:11px;border-radius:99px;padding:3px 8px;background:var(--acc-soft);color:var(--acc);font-weight:650}
     @media(max-width:760px){.dash-columns{grid-template-columns:1fr}.appt{grid-template-columns:62px 1fr}.appt .pill{grid-column:2;justify-self:start}}
   `],
@@ -38,6 +42,15 @@ import { DashboardData } from '../core/models';
       <div class="metric"><span>Therapists on shift now</span><strong>{{ d.therapists_on_shift }}</strong><small>Based on today's active roster</small></div>
       <div class="metric"><span>Cancelled / no-show</span><strong>{{ d.today.cancelled + d.today.no_show }}</strong><small>{{ d.today.cancelled }} cancelled · {{ d.today.no_show }} no-show</small></div>
     </div>
+    <section class="card"><div class="row" style="justify-content:space-between;align-items:center"><h2>Six-month performance</h2><small>Completed service value and new customers</small></div>
+      <div class="trend">
+        @for (m of d.monthly; track m.month) {
+          <div class="trend-item"><div class="bar-track"><div class="bar" [style.height.%]="barHeight(m.revenue,d.monthly)"></div></div>
+            <b>₹{{ m.revenue | number:'1.0-0' }}</b><small>{{ monthName(m.month) }}</small>
+            <small>{{ m.completed }} visits · {{ m.new_customers }} new</small></div>
+        }
+      </div>
+    </section>
     <div class="dash-columns">
       <section class="card">
         <h2>Upcoming today</h2>
@@ -72,6 +85,12 @@ export class Dashboard implements OnInit {
   error = signal('');
 
   ngOnInit() { return this.load(); }
+
+  monthName(value:string) { return new Date(value+'-01T12:00:00').toLocaleDateString('en-IN',{month:'short'}); }
+  barHeight(value:number, rows:DashboardData['monthly']) {
+    const max=Math.max(1,...rows.map(x=>Number(x.revenue)));
+    return Math.max(2,Number(value)/max*100);
+  }
 
   async load() {
     this.loading.set(true);

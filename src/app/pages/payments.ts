@@ -40,8 +40,10 @@ import { today } from '../core/util';
       <button class="s" (click)="load()" [disabled]="loading()">{{ loading() ? 'Loading...' : 'Refresh' }}</button></div>
     <div class="wrap"><table>
       <tr><th>Type</th><th>Time</th><th>Customer</th><th>Appointment</th><th>Method</th><th class="num">Amount</th><th>Reference / note</th><th></th></tr>
-      @for (p of rows(); track p.id) {
-        <tr><td>SP-{{ p.id.toString().padStart(6,'0') }}</td>
+      @for (p of rows(); track (p.event_type || 'payment') + '-' + p.id) {
+        <tr><td><span class="badge">{{ p.event_type === 'refund' ? 'Refund' : 'Payment' }}</span>
+            @if (p.event_type !== 'refund') { <small>SP-{{ (p.payment_id || p.id).toString().padStart(6,'0') }}</small> }
+          </td>
           <td>{{ p.received_at | date:'shortTime' }}</td>
           <td>{{ p.customer }}<br><small>{{ p.phone }}</small></td>
           <td>#{{ p.appointment_id }} · {{ p.start_at.replace('T',' ') }}</td>
@@ -128,7 +130,7 @@ export class Payments implements OnInit {
 
   async receipt(p: Payment) {
     try {
-      const blob = await this.api.blob('/payments/'+p.id+'/receipt');
+      const blob = await this.api.blob('/payments/'+(p.payment_id || p.id)+'/receipt');
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href=url;
       a.download = 'receipt_SP-'+(p.payment_id || p.id).toString().padStart(6,'0')+'.pdf'; a.click();

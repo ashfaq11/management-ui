@@ -84,3 +84,8 @@ tr.detail td{background:var(--bg);padding:14px 16px}
 .link{background:none;border:0;padding:0;color:var(--acc);font-weight:600;cursor:pointer;text-align:left}
 .link:hover{text-decoration:underline}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.chips{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:5px 12px;font-size:13px}
+.chips button:hover{border-color:var(--acc);color:var(--acc)}
+.chips button.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}

@@ -82,7 +82,8 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
     <div class="row">
       <div><label>Name</label><input [(ngModel)]="s.name"></div>
       <div><label>Price</label><input type="number" min="0" [(ngModel)]="s.price"></div>
-      <div><label>Minutes</label><input type="number" min="1" [(ngModel)]="s.duration_min"></div>
+      <div><label>Minutes</label><input type="number" min="1" [(ngModel)]="s.duration_min">
+        <div class="chips">@for (m of [30, 60, 90, 120]; track m) {<button type="button" [class.on]="s.duration_min === m" (click)="s.duration_min = m">{{ m }} min</button>}</div></div>
     </div>
     <p style="font-size:12px;color:var(--mut)">A new price applies to future bookings only; existing appointments keep the price they were booked at.</p>
     <button class="p" (click)="saveS()">{{ sId() ? 'Save changes' : 'Add service' }}</button>

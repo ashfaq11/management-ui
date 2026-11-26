@@ -28,7 +28,8 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
         <option [ngValue]="undefined">Choose a service</option>
         @for (s of services(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select></div>
       <div><label>Duration (min) &middot; blank = service default {{ serviceMinutes() }}</label>
-        <input type="number" min="5" max="720" step="5" [(ngModel)]="duration_min" [placeholder]="'' + serviceMinutes()"></div>
+        <input type="number" min="5" max="720" step="5" [(ngModel)]="duration_min" [placeholder]="'' + serviceMinutes()">
+        <div class="chips">@for (m of [30, 60, 90, 120]; track m) {<button type="button" [class.on]="duration_min === m" (click)="duration_min = m">{{ m }} min</button>}</div></div>
     </div>
     @if (therapist_id) {
     <app-when-picker [(value)]="start_at" [therapistId]="therapist_id" [durationMin]="duration()" />

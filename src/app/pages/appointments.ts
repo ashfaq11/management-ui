@@ -20,7 +20,8 @@ import { today } from '../core/util';
       <div><label>{{ editId() ? "Price (blank = keep, or list price if service changed)" : "Price override (optional)" }}</label><input type="number" min="0" [(ngModel)]="f.price"></div>
       <div><label>Duration (min) &middot; blank = {{ editId() ? "keep" : "service default " + serviceMinutes() }}</label>
         <input type="number" min="5" max="720" step="5" [(ngModel)]="f.duration_min"
-          [placeholder]="'' + serviceMinutes()"></div>
+          [placeholder]="'' + serviceMinutes()">
+        <div class="chips">@for (m of [30, 60, 90, 120]; track m) {<button type="button" [class.on]="f.duration_min === m" (click)="f.duration_min = m">{{ m }} min</button>}</div></div>
       <div><label>Notes</label><input [(ngModel)]="f.notes"></div>
     </div>
     <app-when-picker [(value)]="f.start_at" [therapistId]="f.therapist_id" [durationMin]="duration()"

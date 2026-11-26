@@ -46,7 +46,7 @@ export interface IncentiveReport { month: string; therapists: Payslip[]; total_i
 export interface ServiceTotal { service: string; count: number; minutes: number; revenue: number; }
 export interface Summary {
   month: string | null; from: string; to: string; therapist_id: number | null; revenue: number; services_count: number; minutes: number; new_customers: number;
-  plan_sales?: number; paid_by_plan?: number; collected?: number; payroll?: number | null; profit?: number | null;
+  plan_sales?: number; paid_by_plan?: number; collected?: number; payroll?: number | null; profit?: number | null; expenses?: number;
   plan_lines?: { kind: 'plan' | 'topup'; at: string; customer: string; plan: string; plan_type: 'hours' | 'rupees'; amount: number; price_paid: number }[];
   by_status: { status: string; count: number; amount: number }[];
   by_service: ServiceTotal[];

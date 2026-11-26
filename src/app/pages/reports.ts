@@ -85,9 +85,10 @@ interface ShiftReport {
         <div class="kpi"><span>Paid from plans</span><b>&#8377;{{ s.paid_by_plan | number: '1.0-2' }}</b></div>
       }
       @if (s.collected != null) { <div class="kpi"><span>Money collected</span><b>&#8377;{{ s.collected | number: '1.0-2' }}</b></div> }
+      @if (s.expenses != null && !filtered()) { <div class="kpi"><span>Expenses</span><b>&#8377;{{ s.expenses | number: '1.0-0' }}</b></div> }
       @if (s.profit != null) {
         <div class="kpi"><span>Payroll</span><b>&#8377;{{ s.payroll | number: '1.0-0' }}</b></div>
-        <div class="kpi" [style.border-top-color]="s.profit < 0 ? 'var(--bad)' : 'var(--ok)'"><span>Profit after payroll</span>
+        <div class="kpi" [style.border-top-color]="s.profit < 0 ? 'var(--bad)' : 'var(--ok)'"><span>Net profit</span>
           <b [style.color]="s.profit < 0 ? 'var(--bad)' : 'var(--ok)'">&#8377;{{ s.profit | number: '1.0-0' }}</b></div>
       }
     </div>
@@ -99,7 +100,7 @@ interface ShiftReport {
           <td class="num">{{ x.amount | number: '1.0-2' }} {{ x.plan_type === 'hours' ? 'hrs' : 'Rs' }}</td><td class="num">{{ x.price_paid | number: '1.2-2' }}</td></tr>
       }
       <tr><th colspan="5">Total</th><th class="num">{{ s.plan_sales | number: '1.2-2' }}</th></tr></table></div>
-      <p class="hint">Money collected = service revenue &minus; services paid from plans + plan sales.</p>
+      <p class="hint">Money collected = service revenue &minus; services paid from plans + plan sales. Net profit = money collected &minus; payroll &minus; expenses.</p>
     }
 
     <h3>By service</h3>

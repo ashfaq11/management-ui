@@ -176,9 +176,9 @@ export class Appointments implements OnInit {
   }
 
   plansByType(type: 'hours' | 'rupees') {
-    const today = today();
+    const currentDate = today();
     return this.completionPlans().filter((p) => p.plan_type === type && Number(p.balance) > 0
-      && (!p.expires_on || p.expires_on >= today));
+      && (!p.expires_on || p.expires_on >= currentDate));
   }
 
   availableBalance(type: 'hours' | 'rupees') {

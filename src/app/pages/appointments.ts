@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { DayBoard } from '../shared/day-board';
 import { DurationPipe } from '../shared/duration.pipe';
 import { SearchSelect, therapistOptions } from '../shared/search-select';
 import { Api, errorText } from '../core/api';
@@ -9,7 +10,7 @@ import { WhenPicker } from '../shared/when-picker';
 import { today } from '../core/util';
 
 @Component({
-  selector: 'app-appointments', imports: [DurationPipe, SearchSelect, FormsModule, DecimalPipe, WhenPicker],
+  selector: 'app-appointments', imports: [DayBoard, DurationPipe, SearchSelect, FormsModule, DecimalPipe, WhenPicker],
   styles: [`
     .cal-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
     .cal-toolbar .spacer{flex:1}
@@ -150,6 +151,9 @@ import { today } from '../core/util';
       <strong>{{ periodLabel() }}</strong>
       <button class="s" (click)="movePeriod(1)" aria-label="Next period">&rsaquo;</button>
       <button class="s" (click)="goToday()">Today</button>
+      @if (calendarMode() === 'day') {
+        <button type="button" class="s" [class.active]="board()" (click)="board.set(!board())">{{ board() ? 'List view' : 'Therapist board' }}</button>
+      }
       <span class="spacer"></span>
       <select style="max-width:200px" [(ngModel)]="therapistFilter" (ngModelChange)="load()">
         <option [ngValue]="null">All therapists</option>
@@ -181,12 +185,14 @@ import { today } from '../core/util';
           </section>
         }
       </div>
+    } @else if (board()) {
+      <app-day-board [appointments]="$any(rows())" [therapists]="therapists()" (pick)="openFromBoard($event)" />
     } @else {
       <div class="wrap">
         @if (rows().length) {
           <table><tr><th>Time</th><th>Customer</th><th>Therapist</th><th>Service</th><th>Duration</th><th class="num">Price</th><th class="num">Paid</th><th class="num">Due</th><th>Payment status</th><th>Appointment status</th><th>Actions</th></tr>
           @for (a of rows(); track a.id) {
-            <tr><td>{{ a.start_at.slice(11,16) }}</td><td>{{ a.customer }}<br><small>{{ a.phone }}</small></td>
+            <tr [id]="'appt-' + a.id"><td>{{ a.start_at.slice(11,16) }}</td><td>{{ a.customer }}<br><small>{{ a.phone }}</small></td>
               <td>{{ a.therapist }}</td><td>{{ a.service }}</td><td>{{ a.duration_min | dur }}</td><td class="num">{{ a.price | number:'1.2-2' }}</td>
               <td class="num">{{ a.paid_amount || 0 | number:'1.2-2' }}</td><td class="num"><strong>{{ a.balance_due || 0 | number:'1.2-2' }}</strong></td>
               <td><span class="pay-state" [class.pay-pending]="paymentState(a)==='pending'"
@@ -196,7 +202,9 @@ import { today } from '../core/util';
                 @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }</select></td>
               <td style="white-space:nowrap">
                 @if (a.status === 'booked') { <button class="s" (click)="edit(a)">Edit</button>
-                  @if (!a.paid_amount && a.payment_status !== 'prepaid') { <button class="s" (click)="usePlan(a)">Use membership</button> } }
+                  @if (!a.paid_amount && a.payment_status !== 'prepaid') { <button class="s" (click)="usePlan(a)">Use membership</button> }
+                  @if (a.payment_status === 'prepaid') { <button class="s" (click)="usePlan(a)">Change membership</button>
+                    <button class="s" (click)="dropPlan(a)">Remove membership</button> } }
                 @if ((a.balance_due ?? 0) > 0 && (a.status === 'booked' || a.status === 'completed')) {
                   <button class="s" (click)="startPayment(a)">Collect</button>
                 }
@@ -463,6 +471,13 @@ export class Appointments implements OnInit {
   }
 
   planOnly = signal(false);
+  board = signal(false);
+  openFromBoard(id: number) { this.board.set(false); setTimeout(() => document.getElementById('appt-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })); }
+  /** Give the hours / rupees back and leave the booking unpaid. */
+  async dropPlan(a: Appointment) {
+    try { await this.api.delete('/appointments/' + a.id + '/plan'); this.say('Membership deduction removed; balance returned.'); await this.load(); }
+    catch (e) { this.say(errorText(e), true); }
+  }
   /** Deduct from a plan now, before the visit (the appointment stays booked). */
   usePlan(a: Appointment) { this.planOnly.set(true); void this.askCompletion(a, true); }
 

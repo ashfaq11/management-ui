@@ -18,6 +18,7 @@ export const routes: Routes = [
       { path: 'users', canActivate: [adminGuard], loadComponent: () => import('./pages/users').then((m) => m.Users) },
       { path: 'staff', canActivate: [spaGuard, adminGuard], loadComponent: () => import('./pages/staff').then((m) => m.Staff) },
       { path: 'reports', canActivate: [spaGuard, adminGuard], loadComponent: () => import('./pages/reports').then((m) => m.Reports) },
+      { path: 'plans', canActivate: [spaGuard, adminGuard], loadComponent: () => import('./pages/plan-packages').then((m) => m.PlanPackages) },
       { path: 'expenses', canActivate: [spaGuard, adminGuard], loadComponent: () => import('./pages/expenses').then((m) => m.Expenses) },
       { path: 'payroll', canActivate: [spaGuard, adminGuard], loadComponent: () => import('./pages/payroll').then((m) => m.Payroll) },
     ],

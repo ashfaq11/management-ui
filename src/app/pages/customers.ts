@@ -117,7 +117,7 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
           <div style="flex:0 0 190px"><label>Payment</label><select [(ngModel)]="assign.paid"><option [ngValue]="true">Paid now</option><option [ngValue]="false">Pending (pay later)</option></select></div>
           <div style="flex:0 0 auto"><button class="p" style="margin:0" (click)="assignPlan(c.id)" [disabled]="!assign.package_id">Assign plan</button></div>
         </div>
-      } @else { <small>No plan packages yet. {{ auth.isAdmin() ? 'Add them under Therapists & services.' : 'Ask an admin to add them.' }}</small> }
+      } @else { <small>No plan packages yet. {{ auth.isAdmin() ? 'Add them in the Plans tab.' : 'Ask an admin to add them.' }}</small> }
       @if (planMsg()) { <div class="msg" [class.err]="planErr()">{{ planMsg() }}</div> }
       @if (auth.isAdmin()) {
       <details class="sec"><summary>Custom plan <small>admin only, any amount and price</small></summary><div class="body">

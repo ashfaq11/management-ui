@@ -8,6 +8,7 @@ import { PlanPackage } from '../core/models';
 @Component({
   selector: 'app-plan-packages', imports: [FormsModule, DecimalPipe],
   template: `
+  <div class="page-head"><div><h1>Plans</h1><p>Set up prepaid plans once; staff assign them to customers at these prices.</p></div></div>
   <div class="card"><h2>Plan packages</h2>
     <p class="hint">The prepaid plans you sell. Staff can only assign these to customers, at these prices.</p>
     <div class="wrap"><table><tr><th>Package</th><th>Gives</th><th class="num">Price</th><th>Valid for</th><th>Active</th><th></th></tr>

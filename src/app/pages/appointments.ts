@@ -53,12 +53,24 @@ import { today } from '../core/util';
           [placeholder]="'' + serviceMinutes()">
         <div class="chips">@for (m of [30, 60, 90, 120]; track m) {<button type="button" [class.on]="f.duration_min === m" (click)="f.duration_min = m">{{ m }} min</button>}</div></div>
       <div><label>Notes</label><input [(ngModel)]="f.notes"></div>
-      @if (!editId()) {
-        <div><label>Pay from plan (optional)</label>
-          <select [(ngModel)]="bookPlan"><option [ngValue]="null">No — decide at completion</option>
-            <option value="hours">Deduct hours now</option><option value="rupees">Deduct rupees now</option></select></div>
-        @if (bookPlan === 'hours') {
-          <div><label>Hours to deduct</label><input type="number" min="0.25" step="0.25" [(ngModel)]="bookHours" [placeholder]="'' + (serviceMinutes() / 60)"></div>
+      @if (!editId() && f.customer_id) {
+        @if (activePlans().length) {
+          <div><label>Pay from plan (optional) · {{ planSummary() }}</label>
+            <select [(ngModel)]="bookPlan"><option [ngValue]="null">No — decide at completion</option>
+              @if (hasType('hours')) { <option value="hours">Deduct hours now</option> }
+              @if (hasType('rupees')) { <option value="rupees">Deduct rupees now</option> }</select></div>
+          @if (bookPlan === 'hours') {
+            <div><label>Hours to deduct</label><input type="number" min="0.25" step="0.25" [(ngModel)]="bookHours" [placeholder]="'' + (serviceMinutes() / 60)"></div>
+          }
+        } @else if (packages().length) {
+          <div><label>No active plan · sell one (optional)</label>
+            <select [(ngModel)]="sellPkg"><option [ngValue]="null">No plan</option>
+              @for (k of packages(); track k.id) { @if (k.is_active) { <option [ngValue]="k.id">{{ k.name }} · ₹{{ k.price }}</option> } }</select></div>
+          @if (sellPkg) {
+            <div><label>Plan payment</label><select [(ngModel)]="sellPay"><option value="cash">Paid · Cash</option><option value="upi">Paid · UPI</option>
+              <option value="card">Paid · Card</option><option value="bank_transfer">Paid · Bank</option><option value="pending">Pending</option></select></div>
+            <div><label>Use it for this visit?</label><select [(ngModel)]="sellUse"><option [ngValue]="true">Yes, deduct now</option><option [ngValue]="false">No</option></select></div>
+          }
         }
       }
     </div>
@@ -253,8 +265,27 @@ export class Appointments implements OnInit {
   }
 
   /** Choosing from the list fills the search box with that customer. */
+  custPlans = signal<CustomerPlan[]>([]);
+  packages = signal<{ id: number; name: string; price: number; plan_type: 'hours' | 'rupees'; is_active: boolean }[]>([]);
+  sellPkg: number | null = null; sellPay = 'cash'; sellUse = true;
+  activePlans = computed(() => this.custPlans().filter((p) => Number(p.balance) > 0 && (!p.expires_on || p.expires_on >= new Date().toISOString().slice(0, 10))));
+  hasType(t: string) { return this.activePlans().some((p) => p.plan_type === t); }
+  planSummary() {
+    const h = this.activePlans().filter((p) => p.plan_type === 'hours').reduce((a, p) => a + Number(p.balance), 0);
+    const r = this.activePlans().filter((p) => p.plan_type === 'rupees').reduce((a, p) => a + Number(p.balance), 0);
+    return [h ? `${h} hrs left` : '', r ? `₹${r.toLocaleString('en-IN')} left` : ''].filter(Boolean).join(', ');
+  }
+  private async loadCustPlans(id: number) {
+    this.custPlans.set([]); this.bookPlan = null; this.sellPkg = null;
+    try {
+      const c = await this.api.get<{ plans?: CustomerPlan[] }>('/customers/' + id);
+      if (this.f.customer_id === id) this.custPlans.set(c.plans ?? []);
+      if (!this.packages().length) this.packages.set(await this.api.get('/plan-packages'));
+    } catch { /* plans are optional here */ }
+  }
   pickCustomer(id: number, fill = true) {
     this.f.customer_id = id;
+    void this.loadCustPlans(id);
     const c = this.customers().find((x) => x.id === id);
     if (c && fill) this.customerSearch = c.name;
   }
@@ -383,6 +414,13 @@ export class Appointments implements OnInit {
       if (!body['duration_min']) delete body['duration_min'];
       if (!body['notes']) body['notes'] = null;
       const id = this.editId();
+      if (!id && !this.bookPlan && this.sellPkg && this.f.customer_id) {
+        const paid = this.sellPay !== 'pending';
+        await this.api.post(`/customers/${this.f.customer_id}/plans/assign`, { package_id: this.sellPkg, paid, payment_method: paid ? this.sellPay : null });
+        const pk = this.packages().find((k) => k.id === this.sellPkg);
+        if (this.sellUse && pk) this.bookPlan = pk.plan_type;
+        this.sellPkg = null;
+      }
       if (!id && this.bookPlan) {
         body['plan_type'] = this.bookPlan;
         if (this.bookPlan === 'hours' && this.bookHours) body['deduct_amount'] = Number(this.bookHours);

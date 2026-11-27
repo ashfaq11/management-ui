@@ -120,23 +120,7 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
         </div>
       } @else { <small>No membership plans yet. {{ auth.isAdmin() ? 'Add them in the Memberships tab.' : 'Ask an admin to add them.' }}</small> }
       @if (planMsg()) { <div class="msg" [class.err]="planErr()">{{ planMsg() }}</div> }
-      @if (auth.isAdmin()) {
-      <details class="sec"><summary>Custom plan <small>admin only, any amount and price</small></summary><div class="body">
-      <div class="grid">
-        <div><label>Plan name *</label><input [(ngModel)]="planForm.name" placeholder="e.g. 10 hour package"></div>
-        <div><label>Balance type</label><select [(ngModel)]="planForm.plan_type">
-          <option value="hours">Hours</option><option value="rupees">Rupees (INR)</option></select></div>
-        <div><label>{{ planForm.plan_type === 'hours' ? 'Hours purchased' : 'Rupees purchased' }} *</label>
-          <input type="number" min="0.01" step="0.01" [(ngModel)]="planForm.amount"></div>
-        <div><label>Plan cost (Rs, optional)</label>
-          <input type="number" min="0" step="0.01" [(ngModel)]="planForm.price_paid" [placeholder]="planForm.plan_type === 'rupees' ? 'same as amount' : 'e.g. 9000 for 10 hrs'"></div>
-        <div><label>Expiry date (optional)</label><input type="date" [(ngModel)]="planForm.expires_on"></div>
-        <div style="flex:0 0 auto"><label>Payment</label><select [(ngModel)]="planForm.paid"><option value="cash">Paid · Cash</option><option value="upi">Paid · UPI</option><option value="card">Paid · Card</option><option value="bank_transfer">Paid · Bank transfer</option><option value="other">Paid · Other</option><option value="pending">Pending (pay later)</option></select></div>
-      </div>
-      <label>Plan notes</label><input [(ngModel)]="planForm.notes" placeholder="Optional package details">
-      <button class="p" style="margin-top:8px" (click)="addPlan(c.id)">Add custom plan</button>
-      </div></details>
-      }
+
       <h3>Payment history</h3>
       <div class="wrap"><table><tr><th>Receipt</th><th>Received</th><th>Appointment</th><th>Method</th><th class="num">Received</th><th class="num">Refunded</th><th></th></tr>
         @for (p of (c.payments ?? []); track p.id) {

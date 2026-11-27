@@ -30,7 +30,7 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
       <div style="flex:2"><label>Plan</label><select [(ngModel)]="pkgChoice" (ngModelChange)="includePlan = $event === 'custom'">
         <option [ngValue]="null">No plan</option>
         @for (k of packages(); track k.id) { @if (k.is_active) { <option [ngValue]="k.id">{{ pkgLabel(k) }}</option> } }
-        @if (auth.isAdmin()) { <option value="custom">Custom plan (admin)…</option> }</select></div>
+</select></div>
       @if (pkgChoice !== null && pkgChoice !== 'custom') {
         <div style="flex:0 0 190px"><label>Payment</label><select [(ngModel)]="pkgPaid"><option value="cash">Paid · Cash</option><option value="upi">Paid · UPI</option><option value="card">Paid · Card</option><option value="bank_transfer">Paid · Bank transfer</option><option value="other">Paid · Other</option><option value="pending">Pending (pay later)</option></select></div>
       }

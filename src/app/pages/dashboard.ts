@@ -5,9 +5,10 @@ import { Api, errorText } from '../core/api';
 import { Auth } from '../core/auth';
 import { DashboardData } from '../core/models';
 
+import { TodayBookings } from '../shared/today-bookings';
 @Component({
   selector: 'app-dashboard',
-  imports: [DecimalPipe, RouterLink],
+  imports: [DecimalPipe, RouterLink, TodayBookings],
   styles: [`
     .dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:16px 0}
     .metric{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
@@ -51,6 +52,7 @@ import { DashboardData } from '../core/models';
         }
       </div>
     </section>
+    <app-today-bookings />
     <section class="card">
       <h2>Today's shift</h2>
       @if (d.today_shifts?.length) {

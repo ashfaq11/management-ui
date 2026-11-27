@@ -67,6 +67,13 @@ interface ShiftReport {
         <option [ngValue]="null">All services</option>
         @for (x of services(); track x.id) { <option [ngValue]="x.id">{{ x.name }}</option> }
       </select></div>
+    <div><label>Payment type</label>
+      <select [ngModel]="method" (ngModelChange)="method = $event; load()">
+        <option [ngValue]="null">All payment types</option>
+        <option value="cash">Cash</option><option value="upi">UPI</option><option value="card">Card</option>
+        <option value="bank_transfer">Bank transfer</option><option value="other">Other</option>
+        <option value="plan">Paid from plan</option><option value="unpaid">Unpaid</option>
+      </select></div>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="p" (click)="download('pdf')" [disabled]="busy()">{{ busy() ? 'Preparing...' : 'Download PDF' }}</button>
@@ -86,6 +93,13 @@ interface ShiftReport {
         <small>joined this period</small></div> }
     </div>
 
+    @if (s.by_method?.length) {
+      <div class="breakup">@for (m of s.by_method; track m.method) {
+        <span><em>{{ methodLabel(m.method) }}</em> {{ inr(m.services + m.plans) }}</span> }
+        <span class="tot"><em>Total</em> {{ inr(sumIn(s.by_method)) }}</span>
+        @if (s.paid_by_plan) { <span class="mute"><em>From plans</em> {{ inr(s.paid_by_plan) }}</span> }
+      </div>
+    }
     @if (s.collected != null && !filtered()) {
       <div class="flow">
         <h4>Money this period</h4>
@@ -154,13 +168,13 @@ interface ShiftReport {
     </table></div>
 
     <h3 style="margin-top:16px">All services done ({{ s.lines.length }})</h3>
-    <div class="wrap"><table><tr><th>Date</th><th>Customer</th><th>Service</th><th>Therapist</th><th class="num">Minutes</th><th class="num">Price</th></tr>
+    <div class="wrap"><table><tr><th>Date</th><th>Customer</th><th>Service</th><th>Therapist</th><th class="num">Minutes</th><th>Paid via</th><th class="num">Price</th></tr>
     @for (x of s.lines; track x.id) {
-      <tr><td>{{ when(x.start_at) }}</td><td>{{ x.customer }}</td><td>{{ x.service }}</td><td>{{ x.therapist }}</td><td class="num">{{ x.duration_min }}</td>
+      <tr><td>{{ when(x.start_at) }}</td><td>{{ x.customer }}</td><td>{{ x.service }}</td><td>{{ x.therapist }}</td><td class="num">{{ x.duration_min }}</td><td>{{ via(x.paid_via) }}</td>
         <td class="num">{{ x.price | number: '1.2-2' }}</td></tr>
-    } @empty { <tr><td colspan="6">No completed services this month</td></tr> }
+    } @empty { <tr><td colspan="7">No completed services this month</td></tr> }
     @if (s.lines.length) {
-      <tr><th colspan="4">Total</th><th class="num">{{ s.minutes }}</th><th class="num">{{ s.revenue | number: '1.2-2' }}</th></tr>
+      <tr><th colspan="4">Total</th><th class="num">{{ s.minutes }}</th><th></th><th class="num">{{ s.revenue | number: '1.2-2' }}</th></tr>
     }
     </table></div>
   }
@@ -303,10 +317,16 @@ export class Reports implements OnInit {
 
   query(): Record<string, string | number | undefined> {
     return { ...this.period(), therapist_id: this.therapistId ?? undefined,
-      customer_id: this.customerId ?? undefined, service_id: this.serviceId ?? undefined };
+      customer_id: this.customerId ?? undefined, service_id: this.serviceId ?? undefined, method: this.method ?? undefined };
   }
-  filtered() { return this.therapistId != null || this.customerId != null || this.serviceId != null; }
-  clear() { this.therapistId = this.customerId = this.serviceId = null; void this.load(); }
+  method: string | null = null;
+  filtered() { return this.therapistId != null || this.customerId != null || this.serviceId != null || this.method != null; }
+  clear() { this.therapistId = this.customerId = this.serviceId = null; this.method = null; void this.load(); }
+  sumIn(rows: { services: number; plans: number }[]) { return rows.reduce((a, m) => a + m.services + m.plans, 0); }
+  via(v?: string | null) {
+    if (!v) return '—'; if (v === 'plan') return 'Plan'; if (v === 'unpaid') return 'Unpaid';
+    return v.split(',').map((m) => this.methodLabel(m)).join(', ');
+  }
 
   /** Query for the chosen period: a month, or a from/to range (both days included). */
   period(): Record<string, string> {

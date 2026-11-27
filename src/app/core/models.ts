@@ -82,7 +82,7 @@ export interface Summary {
   /** Completed services per therapist, with a per-service breakdown. */
   by_therapist: { therapist_id: number; therapist: string; count: number; minutes: number; revenue: number; services: ServiceTotal[] }[];
   /** Every completed service in the month: the revenue, line by line. */
-  lines: { id: number; start_at: string; duration_min: number; price: number; customer: string; service: string; therapist_id: number; therapist: string }[];
+  lines: { id: number; start_at: string; duration_min: number; price: number; paid_via?: string | null; customer: string; service: string; therapist_id: number; therapist: string }[];
 }
 
 export interface User { id: number; username: string; role: Role; is_active: boolean; spa_id: number | null; spa: string | null; }

@@ -52,9 +52,9 @@ import { Confirm } from '../shared/confirm';
         @for (s of services(); track s.id) { <option [ngValue]="s.id">{{ s.name }} (Rs {{ s.price }})</option> }</select></div>
       <div><label>{{ editId() ? "Price (blank = keep, or list price if service changed)" : "Price override (optional)" }}</label><input type="number" min="0" [(ngModel)]="f.price"></div>
       <div><label>Duration (min) &middot; blank = {{ editId() ? "keep" : "service default " + serviceMinutes() }}</label>
-        <input type="number" min="5" max="720" step="5" [(ngModel)]="f.duration_min"
+        <input type="number" min="5" max="720" step="5" [(ngModel)]="f.duration_min" (ngModelChange)="bookHours = null"
           [placeholder]="'' + serviceMinutes()">
-        <div class="chips">@for (m of [30, 60, 90, 120]; track m) {<button type="button" [class.on]="f.duration_min === m" (click)="f.duration_min = m">{{ m }} min</button>}</div></div>
+        <div class="chips">@for (m of [30, 60, 90, 120]; track m) {<button type="button" [class.on]="f.duration_min === m" (click)="f.duration_min = m; bookHours = null">{{ m }} min</button>}</div></div>
       <div><label>Notes</label><input [(ngModel)]="f.notes"></div>
       @if (!editId() && f.customer_id) {
         @if (activePlans().length) {
@@ -63,7 +63,7 @@ import { Confirm } from '../shared/confirm';
               @if (hasType('hours')) { <option value="hours">Deduct hours now</option> }
               @if (hasType('rupees')) { <option value="rupees">Deduct rupees now</option> }</select></div>
           @if (bookPlan === 'hours') {
-            <div><label>Hours to deduct</label><input type="number" min="0.25" step="0.25" [(ngModel)]="bookHours" [placeholder]="'' + (serviceMinutes() / 60)"></div>
+            <div><label>Hours to deduct</label><input type="number" min="0.25" step="0.25" [ngModel]="bookHours ?? autoHours()" (ngModelChange)="bookHours = $event"></div>
           }
           @if (bookPlan) { <div><label>&nbsp;</label><small [class.shift-warn]="bookPreview().short">{{ bookPreview().text }}</small></div> }
         } @else if (packages().length) {
@@ -322,6 +322,7 @@ export class Appointments implements OnInit {
   /** The chosen service's length, so the free-time buttons fit it. */
   serviceMinutes() { return this.services().find((x) => x.id === this.f.service_id)?.duration_min ?? 60; }
   /** The length the free-time buttons must fit: the override if given, else the service's. */
+  autoHours() { return Math.round(this.duration() / 60 * 100) / 100; }
   duration() { return this.f.duration_min || this.serviceMinutes(); }
   moveDay(n: number) {
     const d = new Date(this.day() + 'T12:00:00'); d.setDate(d.getDate() + n);
@@ -446,7 +447,7 @@ export class Appointments implements OnInit {
       }
       if (!id && this.bookPlan) {
         body['plan_type'] = this.bookPlan;
-        if (this.bookPlan === 'hours' && this.bookHours) body['deduct_amount'] = Number(this.bookHours);
+        if (this.bookPlan === 'hours') body['deduct_amount'] = Number(this.bookHours || this.autoHours());
       }
       const r = id ? await this.api.put(`/appointments/${id}`, body)
         : await this.api.post<{ plan_deduction?: { amount: number; unit: string; plan_name: string; remaining_balance: number } | null }>('/appointments', body);
@@ -553,7 +554,7 @@ export class Appointments implements OnInit {
     const t = this.bookPlan as 'hours' | 'rupees';
     const bal = this.activePlans().filter((p) => p.plan_type === t).reduce((s, p) => s + Number(p.balance), 0);
     if (t !== 'hours') return { text: `₹${bal.toLocaleString('en-IN')} available`, short: false };
-    const need = Number(this.bookHours || this.serviceMinutes() / 60);
+    const need = Number(this.bookHours || this.autoHours());
     return bal >= need ? { text: `Will deduct ${need} hrs · ${+(bal - need).toFixed(2)} hrs left after`, short: false }
       : { text: `Only ${bal} hrs left — short by ${+(need - bal).toFixed(2)} hrs. Deduct at completion instead.`, short: true };
   }

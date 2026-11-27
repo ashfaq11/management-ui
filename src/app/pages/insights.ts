@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
 
@@ -20,8 +20,8 @@ interface Insight { title: string; columns: string[]; rows: (string | number | n
     @if (err()) { <div class="msg err">{{ err() }}</div> }
     @if (data(); as d) {
       <h2 style="margin-top:12px">{{ d.title }} <small style="color:var(--mut);font-weight:500">{{ d.rows.length }} rows</small></h2>
-      <div class="wrap"><table><tr>@for (c of d.columns; track $index) { <th [class.num]="isNum(d, $index)">{{ c }}</th> }</tr>
-        @for (r of d.rows; track $index) {
+      <div class="wrap"><table><tr>@for (c of d.columns; track $index) { <th class="sort" [class.num]="isNum(d, $index)" (click)="sortBy($index)">{{ c }}{{ sortCol() === $index ? (sortAsc() ? ' ▲' : ' ▼') : '' }}</th> }</tr>
+        @for (r of sorted(); track $index) {
           <tr>@for (v of r; track $index) { <td [class.num]="typeof(v) === 'number'">{{ show(v) }}</td> }</tr>
         } @empty { <tr><td [attr.colspan]="d.columns.length">Nothing to show for this period.</td></tr> }
         @if (d.total) { <tr>@for (v of d.total; track $index) { <th [class.num]="typeof(v) === 'number'">{{ show(v) }}</th> }</tr> }
@@ -35,7 +35,19 @@ export class Insights implements OnChanges {
   data = signal<Insight | null>(null); err = signal('');
   month = new Date().toISOString().slice(0, 7); days = 30;
   typeof(v: unknown) { return typeof v; }
-  ngOnChanges() { void this.load(); }
+  sortCol = signal<number | null>(null); sortAsc = signal(true);
+  sortBy(i: number) { if (this.sortCol() === i) this.sortAsc.set(!this.sortAsc()); else { this.sortCol.set(i); this.sortAsc.set(true); } }
+  sorted = computed(() => {
+    const d = this.data(); const i = this.sortCol(); if (!d) return [];
+    if (i === null) return d.rows;
+    const dir = this.sortAsc() ? 1 : -1;
+    return [...d.rows].sort((a, b) => {
+      const x = a[i], y = b[i];
+      if (x === null || x === undefined) return 1; if (y === null || y === undefined) return -1;
+      return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y))) * dir;
+    });
+  });
+  ngOnChanges() { this.sortCol.set(null); void this.load(); }
   isNum(d: Insight, i: number) { return d.rows.some((r) => typeof r[i] === 'number'); }
   show(v: unknown) { return typeof v === 'number' ? v.toLocaleString('en-IN', { maximumFractionDigits: 2 }) : v ?? '—'; }
   private q() { return { month: this.month, days: this.days }; }

@@ -16,6 +16,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(r).pipe(tap({
     error: (e) => {
       if (e.status === 401 && !req.url.endsWith('/auth/login')) { auth.clear(); router.navigateByUrl('/login'); }
+      if (e.status === 402) router.navigateByUrl('/renew');
     },
   }));
 };
@@ -24,7 +25,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 export const authGuard: CanActivateFn = async () => {
   const auth = inject(Auth);
   const router = inject(Router);
-  return (await auth.restore()) || router.parseUrl('/login');
+  if (!(await auth.restore())) return router.parseUrl('/login');
+  const m = auth.me();
+  return m?.spa_expired && m.role !== 'superadmin' ? router.parseUrl('/renew') : true;
 };
 
 export const adminGuard: CanActivateFn = async () => {

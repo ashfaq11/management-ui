@@ -3,6 +3,8 @@ import { adminGuard, authGuard, spaGuard, superGuard } from './core/http';
 
 export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./pages/login').then((m) => m.Login) },
+  { path: 'signup', loadComponent: () => import('./pages/signup').then((m) => m.Signup) },
+  { path: 'renew', loadComponent: () => import('./pages/renew').then((m) => m.Renew) },
   {
     path: '', canActivate: [authGuard],
     loadComponent: () => import('./pages/shell').then((m) => m.Shell),

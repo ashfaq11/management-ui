@@ -43,7 +43,7 @@ interface ShiftReport {
 @Component({
   selector: 'app-reports', imports: [DurationPipe, FormsModule, DecimalPipe, Insights],
   template: `
-  <nav class="tabs"><button [class.on]="tab === 'revenue'" (click)="tab = 'revenue'">Revenue & profit</button><button [class.on]="tab === 'therapists'" (click)="tab = 'therapists'">Therapists</button><button [class.on]="tab === 'plans'" (click)="tab = 'plans'">Memberships</button><button [class.on]="tab === 'services'" (click)="tab = 'services'">Services</button><button [class.on]="tab === 'customers'" (click)="tab = 'customers'">Customers</button><button [class.on]="tab === 'payments'" (click)="tab = 'payments'">Payments</button><button [class.on]="tab === 'expenses'" (click)="tab = 'expenses'">Expenses</button><button [class.on]="tab === 'lapsed'" (click)="tab = 'lapsed'">Not seen lately</button><button [class.on]="tab === 'busy'" (click)="tab = 'busy'">Busy hours</button><button [class.on]="tab === 'utilisation'" (click)="tab = 'utilisation'">Utilisation</button><button [class.on]="tab === 'cancellations'" (click)="tab = 'cancellations'">Cancellations</button><button [class.on]="tab === 'expiring'" (click)="tab = 'expiring'">Expiring memberships</button><button [class.on]="tab === 'dues'" (click)="tab = 'dues'">Pending dues</button></nav>
+  <div class="rgroups"><details [open]="inGroup(['revenue', 'payments', 'busy'])"><summary>Revenue</summary><div><button [class.on]="tab === 'revenue'" (click)="tab = 'revenue'">Simple revenue</button><button [class.on]="tab === 'payments'" (click)="tab = 'payments'">Payments</button><button [class.on]="tab === 'busy'" (click)="tab = 'busy'">Busy hours</button></div></details><details [open]="inGroup(['therapists', 'utilisation'])"><summary>Therapists</summary><div><button [class.on]="tab === 'therapists'" (click)="tab = 'therapists'">Performance</button><button [class.on]="tab === 'utilisation'" (click)="tab = 'utilisation'">Utilisation</button></div></details><details [open]="inGroup(['expenses'])"><summary>Expenses</summary><div><button [class.on]="tab === 'expenses'" (click)="tab = 'expenses'">Expenses by type</button></div></details><details [open]="inGroup(['customers', 'lapsed', 'cancellations', 'dues'])"><summary>Customers</summary><div><button [class.on]="tab === 'customers'" (click)="tab = 'customers'">Top customers</button><button [class.on]="tab === 'lapsed'" (click)="tab = 'lapsed'">Not seen lately</button><button [class.on]="tab === 'cancellations'" (click)="tab = 'cancellations'">Cancellations</button><button [class.on]="tab === 'dues'" (click)="tab = 'dues'">Pending dues</button></div></details><details [open]="inGroup(['plans', 'expiring'])"><summary>Memberships</summary><div><button [class.on]="tab === 'plans'" (click)="tab = 'plans'">All memberships</button><button [class.on]="tab === 'expiring'" (click)="tab = 'expiring'">Expiring soon</button></div></details></div>
   @if (tab !== 'revenue') { <app-insights [kind]="tab" /> } @else {
   <div class="card"><div class="row">
     <div><label>Period</label>
@@ -56,6 +56,8 @@ interface ShiftReport {
       <div><label>From</label><input type="date" [max]="to" [ngModel]="from" (ngModelChange)="from = $event; load()"></div>
       <div><label>To</label><input type="date" [min]="from" [ngModel]="to" (ngModelChange)="to = $event; load()"></div>
     }
+  </div>
+  <details class="sec" [open]="filtered()" style="margin:0 0 12px"><summary>More filters <small>therapist, customer, service, payment type</small></summary><div class="row body">
     <div><label>Therapist</label>
       <select [ngModel]="therapistId" (ngModelChange)="therapistId = $event; load()">
         <option [ngValue]="null">All therapists</option>
@@ -78,7 +80,7 @@ interface ShiftReport {
         <option value="bank_transfer">Bank transfer</option><option value="other">Other</option>
         <option value="plan">Paid from plan</option><option value="unpaid">Unpaid</option>
       </select></div>
-  </div>
+  </div></details>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="p" (click)="download('pdf')" [disabled]="busy()">{{ busy() ? 'Preparing...' : 'Download PDF' }}</button>
     <button class="p" (click)="download('xlsx')" [disabled]="busy()" style="background:var(--gold)">Export to Excel</button>
@@ -159,7 +161,7 @@ interface ShiftReport {
     } @empty { <tr><td colspan="4">No completed services this month</td></tr> }
     </table></div>
 
-    <h3 style="margin-top:16px">By therapist</h3>
+    <details class="sec"><summary>By therapist <small>services and amount per therapist</small></summary><div class="body">
     <div class="wrap"><table><tr><th>Therapist / service</th><th class="num">Done</th><th class="num">Time</th><th class="num">Amount</th></tr>
     @for (t of s.by_therapist; track t.therapist_id) {
       <tr style="font-weight:700;background:var(--acc-soft)"><td>{{ t.therapist }}</td><td class="num">{{ t.count }}</td><td class="num">{{ hrs(t.minutes) }}</td>
@@ -171,7 +173,8 @@ interface ShiftReport {
     } @empty { <tr><td colspan="4">No completed services this month</td></tr> }
     </table></div>
 
-    <h3 style="margin-top:16px">All services done ({{ s.lines.length }})</h3>
+    </div></details>
+    <details class="sec"><summary>All services done ({{ s.lines.length }}) <small>every visit with customer and therapist</small></summary><div class="body">
     <div class="wrap"><table><tr><th>Date</th><th>Customer</th><th>Service</th><th>Therapist</th><th>Duration</th><th>Paid via</th><th class="num">Price</th></tr>
     @for (x of s.lines; track x.id) {
       <tr><td>{{ when(x.start_at) }}</td><td>{{ x.customer }}</td><td>{{ x.service }}</td><td>{{ x.therapist }}</td><td>{{ x.duration_min | dur }}</td><td>{{ via(x.paid_via) }}</td>
@@ -180,7 +183,7 @@ interface ShiftReport {
     @if (s.lines.length) {
       <tr><th colspan="4">Total</th><th>{{ s.minutes | dur }}</th><th></th><th class="num">{{ s.revenue | number: '1.2-2' }}</th></tr>
     }
-    </table></div>
+    </table></div></div></details>
   }
   @if (planReport(); as p) {
     <h2 style="margin-top:22px">Membership reporting</h2>
@@ -357,4 +360,5 @@ export class Reports implements OnInit {
   }
   pct(part: number, whole: number) { return whole > 0 ? Math.max(0, Math.min(100, (part / whole) * 100)) : 0; }
   methodLabel(m: string) { return ({ cash: 'Cash', upi: 'UPI', card: 'Card', bank_transfer: 'Bank transfer', other: 'Other' } as Record<string, string>)[m] ?? m; }
+  inGroup(keys: string[]) { return keys.includes(this.tab); }
 }

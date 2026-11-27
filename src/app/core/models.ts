@@ -2,9 +2,10 @@ export type Status = 'booked' | 'completed' | 'cancelled' | 'no_show';
 export const STATUSES: Status[] = ['booked', 'completed', 'cancelled', 'no_show'];
 
 export type Role = 'superadmin' | 'admin' | 'staff';
-export interface Me { id: number; username: string; role: Role; spa_id: number | null; spa: number | null; spa_name: string | null; }
+export interface Me { id: number; username: string; role: Role; spa_id: number | null; spa: number | null; spa_name: string | null; plan_end?: string | null; is_trial?: boolean; spa_expired?: boolean; }
 export interface Spa {
-  id: number; name: string; is_active: boolean; created_at: string; admins: number; staff: number; customers: number;
+  id: number; name: string; is_active: boolean; created_at: string; plan_start?: string | null; plan_end?: string | null;
+  is_trial?: boolean; contact_phone?: string | null; contact_email?: string | null; expired?: boolean; admins: number; staff: number; customers: number;
   revenue_this_month: number;
 }
 export interface PlanPackage {

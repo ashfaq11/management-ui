@@ -32,8 +32,13 @@ export class Auth {
     try { return sessionStorage.getItem(KEY); } catch { return null; }
   }
 
-  async login(username: string, password: string) {
-    const r = await this.api.post<{ token: string }>('/auth/login', { username, password });
+  async login(username: string, password: string) { await this.useToken((await this.api.post<{ token: string }>('/auth/login', { username, password })).token); }
+
+  /** Sign-up returns a token like login does. */
+  async register(body: Record<string, unknown>) { await this.useToken((await this.api.post<{ token: string }>('/auth/register', body)).token); }
+
+  private async useToken(token: string) {
+    const r = { token };
     this.token.set(r.token);
     try { sessionStorage.setItem(KEY, r.token); } catch { /* storage blocked: stay in memory */ }
     this.me.set(await this.api.get<Me>('/auth/me'));

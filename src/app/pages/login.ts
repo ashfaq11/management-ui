@@ -1,11 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { errorText } from '../core/api';
 import { Auth } from '../core/auth';
 
 @Component({
-  selector: 'app-login', imports: [FormsModule],
+  selector: 'app-login', imports: [FormsModule, RouterLink],
   template: `
   <form class="card" style="max-width:340px;margin:12vh auto" (ngSubmit)="go()">
     <h2>StudioDesk</h2><p class="hint" style="margin-top:-6px">Sign in to manage bookings, customers and payroll.</p>
@@ -13,6 +13,7 @@ import { Auth } from '../core/auth';
     <label>Password</label><input name="p" type="password" [(ngModel)]="password" autocomplete="current-password">
     <button class="p" [disabled]="busy()">Sign in</button>
     @if (error()) { <div class="msg err">{{ error() }}</div> }
+    <p class="hint" style="margin-top:14px;text-align:center">New spa? <a routerLink="/signup">Start a free trial</a></p>
   </form>`,
 })
 export class Login {

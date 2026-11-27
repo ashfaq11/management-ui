@@ -1,6 +1,7 @@
 import { Component, Input, OnChanges, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
+import { thisMonth } from '../core/util';
 
 interface Insight { title: string; columns: string[]; rows: (string | number | null)[][]; total?: (string | number)[]; from: string; to: string; }
 
@@ -33,7 +34,7 @@ export class Insights implements OnChanges {
   @Input() kind = 'therapists';
   private api = inject(Api);
   data = signal<Insight | null>(null); err = signal('');
-  month = new Date().toISOString().slice(0, 7); days = 30;
+  month = thisMonth(); days = 30;
   typeof(v: unknown) { return typeof v; }
   ngOnChanges() { void this.load(); }
   isNum(d: Insight, i: number) { return d.rows.some((r) => typeof r[i] === 'number'); }

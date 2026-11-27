@@ -85,8 +85,8 @@ import { ConfirmHost } from '../shared/confirm';
       <a routerLink="/dashboard" routerLinkActive="on" (click)="menu.set(false)"><i>&#9673;</i>Dashboard</a><a routerLink="/appointments" routerLinkActive="on" (click)="menu.set(false)"><i>&#128197;</i>Appointments</a><a routerLink="/onboarding" routerLinkActive="on" (click)="menu.set(false)"><i>&#43;</i>New customer</a><a routerLink="/payments" routerLinkActive="on" (click)="menu.set(false)"><i>&#8377;</i>Payments</a>
       <p class="grp">Customers</p>
       <a routerLink="/customers" routerLinkActive="on" (click)="menu.set(false)"><i>&#128100;</i>Customers</a>
-      @if (auth.isAdmin()) { <a routerLink="/members" routerLinkActive="on" (click)="menu.set(false)"><i>&#128101;</i>Members</a> }
-      @if (auth.isAdmin()) { <a routerLink="/plans" routerLinkActive="on" (click)="menu.set(false)"><i>&#127915;</i>Memberships</a> }
+      @if (auth.isAdmin()) { <a routerLink="/members" routerLinkActive="on" (click)="menu.set(false)"><i>&#128101;</i>Memberships Opted</a> }
+      @if (auth.isAdmin()) { <a routerLink="/plans" routerLinkActive="on" (click)="menu.set(false)"><i>&#127915;</i>Membership Plans</a> }
       @if (auth.isAdmin()) {
         <p class="grp">Team</p>
         <a routerLink="/staff" routerLinkActive="on" (click)="menu.set(false)"><i>&#128101;</i>Team &amp; shifts</a><a routerLink="/attendance" routerLinkActive="on" (click)="menu.set(false)"><i>&#10003;</i>Attendance</a><a routerLink="/payroll" routerLinkActive="on" (click)="menu.set(false)"><i>&#128176;</i>Payroll</a>

@@ -9,7 +9,7 @@ import { Confirm } from '../shared/confirm';
 @Component({
   selector: 'app-plan-packages', imports: [FormsModule, DecimalPipe],
   template: `
-  <div class="page-head"><div><h1>Memberships</h1><p>Set up membership plans once; staff assign them to customers at these prices.</p></div></div>
+  <div class="page-head"><div><h1>Membership Plans</h1><p>Set up membership plans once; staff assign them to customers at these prices.</p></div></div>
   <div class="card"><h2>Membership plans</h2>
     <p class="hint">The membership plans you sell. Staff can only assign these to customers, at these prices.</p>
     <div class="wrap"><table><tr><th>Package</th><th>Gives</th><th class="num">Price</th><th>Valid for</th><th>Active</th><th></th></tr>

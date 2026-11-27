@@ -127,7 +127,7 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
           <div style="flex:0 0 190px"><label>Payment</label><select [(ngModel)]="assign.paid"><option value="cash">Paid · Cash</option><option value="upi">Paid · UPI</option><option value="card">Paid · Card</option><option value="bank_transfer">Paid · Bank transfer</option><option value="other">Paid · Other</option><option value="pending">Pending (pay later)</option></select></div>
           <div style="flex:0 0 auto"><button class="p" style="margin:0" (click)="assignPlan(c.id)" [disabled]="!assign.package_id">Assign membership</button></div>
         </div>
-      } @else { <small>No membership plans yet. {{ auth.isAdmin() ? 'Add them in the Memberships tab.' : 'Ask an admin to add them.' }}</small> }
+      } @else { <small>No membership plans yet. {{ auth.isAdmin() ? 'Add them in the Membership Plans tab.' : 'Ask an admin to add them.' }}</small> }
       @if (planMsg()) { <div class="msg" [class.err]="planErr()">{{ planMsg() }}</div> }
       <h3 style="margin-top:14px">Membership usage history
         <button class="s" (click)="loadHist(c.id)">{{ hist() ? 'Refresh' : 'Show' }}</button>

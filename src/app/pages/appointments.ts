@@ -34,9 +34,10 @@ import { today } from '../core/util';
   template: `
   <div class="card"><h2>{{ editId() ? "Edit appointment #" + editId() : "Book appointment" }}</h2>
     <div class="grid">
-      <div><label>Search customer</label><input name="customerSearch" [(ngModel)]="customerSearch" placeholder="Search name, phone or email">
+      <div><label>Search customer</label><input name="customerSearch" [ngModel]="customerSearch" (ngModelChange)="searchCustomers($event)" placeholder="Search by customer name or phone number">
         <select name="c" [(ngModel)]="f.customer_id">
           @for (c of filteredCustomers(); track c.id) { <option [ngValue]="c.id">{{ c.name }} - {{ c.phone }}</option> }
+          @empty { <option disabled [ngValue]="null">No matching customers</option> }
         </select>
         <small>{{ customerSearch.trim() ? filteredCustomers().length + ' matching customers' : 'Showing first 5 customers. Search to find others.' }}</small>
       </div>
@@ -193,7 +194,8 @@ import { today } from '../core/util';
 export class Appointments implements OnInit {
   private api = inject(Api);
   statuses = STATUSES;
-  customers = signal<Customer[]>([]); customerSearch = ''; therapists = signal<Therapist[]>([]); services = signal<Service[]>([]);
+  customers = signal<Customer[]>([]); customerSearch = ''; private customerSearchSequence = 0;
+  therapists = signal<Therapist[]>([]); services = signal<Service[]>([]);
   rows = signal<Appointment[]>([]); day = signal(today());
   calendarMode = signal<'day'|'week'|'month'>('day');
   therapistFilter: number | null = null;
@@ -219,14 +221,27 @@ export class Appointments implements OnInit {
   }
 
   todayStr = today;
+  async searchCustomers(value: string) {
+    this.customerSearch = value;
+    const sequence = ++this.customerSearchSequence;
+    try {
+      const matches = await this.api.get<Customer[]>('/customers', { q: value.trim() });
+      if (sequence === this.customerSearchSequence) this.customers.set(matches);
+    } catch (e) {
+      if (sequence === this.customerSearchSequence) {
+        this.customers.set([]);
+        this.say(errorText(e), true);
+      }
+    }
+  }
+
   filteredCustomers(): Customer[] {
-    const query = this.customerSearch.trim().toLowerCase();
     const all = this.customers();
-    const matches = query
-      ? all.filter((c) => [c.name, c.phone, c.email ?? ''].some((v) => v.toLowerCase().includes(query)))
-      : all.slice(0, 5);
+    if (this.customerSearch.trim()) return all;
+    const firstFive = all.slice(0, 5);
     const selected = all.find((c) => c.id === this.f.customer_id);
-    return selected && !matches.some((c) => c.id === selected.id) ? [selected, ...matches] : matches;
+    return selected && !firstFive.some((c) => c.id === selected.id)
+      ? [selected, ...firstFive.slice(0, 4)] : firstFive;
   }
   /** The chosen service's length, so the free-time buttons fit it. */
   serviceMinutes() { return this.services().find((x) => x.id === this.f.service_id)?.duration_min ?? 60; }

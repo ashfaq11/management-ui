@@ -65,6 +65,7 @@ import { Spa } from '../core/models';
           <a routerLink="/reports" routerLinkActive="on">Reports</a>
           <a routerLink="/payroll" routerLinkActive="on">Payroll</a>
           <a routerLink="/expenses" routerLinkActive="on">Expenses</a>
+          <a routerLink="/audit" routerLinkActive="on">Audit log</a>
         }
       }
       @if (auth.isAdmin()) { <a routerLink="/users" routerLinkActive="on">Users</a> }

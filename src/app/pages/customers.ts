@@ -96,7 +96,7 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
                 <div style="margin-top:4px"><span class="badge" style="background:var(--gold-soft);color:var(--gold)">Top-up pending{{ x.price_paid ? ' · ₹' + (+x.price_paid).toLocaleString('en-IN') : '' }}</span>
                 @if (true) { <select style="width:auto;min-height:30px;padding:2px 26px 2px 8px;margin-left:6px" [(ngModel)]="markVia"><option value="cash">Cash</option><option value="upi">UPI</option><option value="card">Card</option><option value="bank_transfer">Bank</option><option value="other">Other</option></select><button class="s" style="margin-left:6px" (click)="markTopupPaid(c.id, x.id)">Mark paid</button> }</div> }</td>
             @if (auth.isAdmin()) { <td style="white-space:nowrap"><button class="s" (click)="startPlan(p, 'topup')">Top up</button>
-              <button class="s" (click)="startPlan(p, 'edit')">Edit</button></td> }</tr>
+              <button class="s" (click)="startPlan(p, 'edit')">Edit</button><button class="s" style="color:var(--bad,#c33)" (click)="removePlan(c.id, p)">Remove</button></td> }</tr>
           @if (planEdit?.id === p.id) {
             <tr class="detail"><td colspan="8">
               @if (planEdit!.mode === 'topup') {
@@ -224,6 +224,11 @@ export class Customers implements OnInit {
     if (!(await this.confirm.ask('Mark this top-up as paid?', 'Paid by ' + this.markVia, 'Mark paid', false))) return;
     try { await this.api.put(`/plan-topups/${tid}/paid`, { paid: 'cash' }); this.planErr.set(false); this.planMsg.set('Top-up marked paid.'); await this.open(cid); }
     catch (x) { this.planErr.set(true); this.planMsg.set(errorText(x)); }
+  }
+  async removePlan(cid: number, p: { id: number; name: string; balance: number }) {
+    if (!(await this.confirm.ask(`Remove membership "${p.name}"?`, `${+p.balance} left will be removed. Used memberships are ended (history kept); this is recorded in the audit log.`, 'Remove', true))) return;
+    try { await this.api.delete(`/customers/${cid}/plans/${p.id}`); this.planErr.set(false); this.planMsg.set('Membership removed.'); await this.open(cid); }
+    catch (e) { this.planErr.set(true); this.planMsg.set(errorText(e)); }
   }
   async savePlan(cid: number) {
     if (!(await this.confirm.ask(this.planEdit?.mode === 'topup' ? 'Add this top-up?' : 'Save membership changes?', '', 'Yes, save', false))) return;

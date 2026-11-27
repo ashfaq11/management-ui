@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, computed, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { Api, errorText } from '../core/api';
@@ -29,8 +29,9 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
   @if (!svc) {
   <div class="page-head"><div><h1>Therapists</h1><p>Your team, their profiles, shifts and extra incentives.</p></div></div>
   <div class="card"><h2>Therapists</h2>
+    <input style="max-width:320px;margin-bottom:10px" placeholder="Search therapists by name, phone or speciality" [ngModel]="tq()" (ngModelChange)="tq.set($event)">
     <div class="wrap"><table><tr><th>Name</th><th>Phone</th><th>Specialities</th><th class="num">Fixed salary</th><th class="num">Incentive %</th><th>Active</th><th></th></tr>
-    @for (t of therapists(); track t.id) {
+    @for (t of shownTherapists(); track t.id) {
       <tr [class.open]="viewId() === t.id"><td><button class="link" (click)="viewId.set(viewId() === t.id ? null : t.id)">{{ t.name }}</button></td>
         <td>{{ t.phone }}</td><td>{{ t.specialities }}</td>
         <td class="num">{{ t.fixed_salary | number: '1.2-2' }}</td><td class="num">{{ t.incentive_percent }}</td>
@@ -177,6 +178,12 @@ export class Staff implements OnInit {
   weekdays = [{id:0,name:'Monday'},{id:1,name:'Tuesday'},{id:2,name:'Wednesday'},{id:3,name:'Thursday'},
     {id:4,name:'Friday'},{id:5,name:'Saturday'},{id:6,name:'Sunday'}];
   viewId = signal<number | null>(null);
+  tq = signal('');
+  /** Case-insensitive match on name, phone or specialities. */
+  shownTherapists = computed(() => {
+    const q = this.tq().trim().toLowerCase();
+    return q ? this.therapists().filter((t) => [t.name, t.phone, t.specialities].some((v) => (v ?? '').toLowerCase().includes(q))) : this.therapists();
+  });
   tm = signal(''); sm = signal(''); tId = signal<number | null>(null); sId = signal<number | null>(null);
   t = blankT(); s = blankS();
   private tActive = true; private sActive = true;

@@ -65,6 +65,7 @@ import { Confirm } from '../shared/confirm';
           @if (bookPlan === 'hours') {
             <div><label>Hours to deduct</label><input type="number" min="0.25" step="0.25" [(ngModel)]="bookHours" [placeholder]="'' + (serviceMinutes() / 60)"></div>
           }
+          @if (bookPlan) { <div><label>&nbsp;</label><small [class.shift-warn]="bookPreview().short">{{ bookPreview().text }}</small></div> }
         } @else if (packages().length) {
           <div><label>No membership · sell one (optional)</label>
             <select [(ngModel)]="sellPkg"><option [ngValue]="null">No plan</option>
@@ -82,6 +83,7 @@ import { Confirm } from '../shared/confirm';
     <button class="p" style="margin-top:10px" [disabled]="!slotValid" (click)="save()">{{ editId() ? "Save changes" : "Book" }}</button>
     @if (editId()) { <button class="s" style="margin-left:8px" (click)="cancelEdit()">Cancel</button> }
     @if (msg()) { <div class="msg" [class.err]="isErr()">{{ msg() }}</div> }
+    @if (receipt()) { <a [href]="receipt()" target="_blank" rel="noopener"><button class="s">Send WhatsApp receipt</button></a> }
   </div>
   @if (pendingCompletion(); as pending) {
     <div class="card">
@@ -101,7 +103,9 @@ import { Confirm } from '../shared/confirm';
               <small>{{ p.name }}: {{ p.balance | number: '1.2-2' }} hrs</small><br>
             }
             <button class="p" [disabled]="!canDeduct('hours', pending) || (pending.paid_amount ?? 0) > 0" (click)="completeWith('hours')">Deduct hours</button>
-            @if (!canDeduct('hours', pending)) { <small>No single active hours plan has enough balance.</small> }
+            @if (canDeduct('hours', pending)) { <small style="display:block">After: {{ maxBal('hours') - (deductHours ?? hoursNeeded(pending)) | number: '1.0-2' }} hrs left on that plan</small> }
+            @else if (maxBal('hours') > 0) { <button class="s" [disabled]="(pending.paid_amount ?? 0) > 0" (click)="completeWith('hours', true)">Use {{ maxBal('hours') | number: '1.0-2' }} hrs left + collect the rest</button> }
+            @else { <small>No active hours balance.</small> }
           </div>
           <div>
             <label>Rupees wallet balance</label>
@@ -111,10 +115,14 @@ import { Confirm } from '../shared/confirm';
               <small>{{ p.name }}: Rs {{ p.balance | number: '1.2-2' }}</small><br>
             }
             <button class="p" [disabled]="!canDeduct('rupees', pending) || (pending.paid_amount ?? 0) > 0" (click)="completeWith('rupees')">Deduct rupees</button>
-            @if (!canDeduct('rupees', pending)) { <small>No single active rupees plan has enough balance.</small> }
+            @if (canDeduct('rupees', pending)) { <small style="display:block">After: Rs {{ maxBal('rupees') - rupeesNeeded(pending) | number: '1.0-2' }} left on that plan</small> }
+            @else if (maxBal('rupees') > 0) { <button class="s" [disabled]="(pending.paid_amount ?? 0) > 0" (click)="completeWith('rupees', true)">Use Rs {{ maxBal('rupees') | number: '1.0-2' }} left + collect the rest</button> }
+            @else { <small>No active rupees balance.</small> }
           </div>
         </div>
         @if ((pending.paid_amount ?? 0) > 0) { <small class="shift-warn">A payment has already been recorded for this appointment. Refund it before using a membership plan.</small> }
+        @for (p of unpaidPlans(); track p.id) { <small class="shift-warn" style="display:block">⚠ {{ p.name }}: membership payment is still pending — collect it first.</small> }
+        @for (p of expiredPlans(); track p.id) { <small class="shift-warn" style="display:block">⚠ {{ p.name }} expired on {{ p.expires_on }} ({{ p.balance }} left, can't be used).</small> }
         <small>The oldest eligible plan with enough balance will be used. Balances are not mixed between hours and rupees.</small>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
           @if (!planOnly()) { <button class="s" (click)="completeWith(null)">Complete without plan deduction</button> }
@@ -471,8 +479,11 @@ export class Appointments implements OnInit {
       await this.askCompletion(a);
       return;
     }
+    let keep = false;
+    if ((status === 'cancelled' || status === 'no_show') && a.payment_status === 'prepaid')
+      keep = !(await this.confirm.ask('Return the membership hours / rupees?', 'Yes returns them. Choose No to keep them deducted (e.g. late-cancel or no-show charge).', 'Yes, return', false));
     try {
-      await this.api.patch('/appointments/' + a.id + '/status', { status });
+      await this.api.patch('/appointments/' + a.id + '/status', { status, ...(keep ? { keep_plan: true } : {}) });
       this.say(status === 'cancelled' ? 'Appointment cancelled. Any active plan deduction was reversed.' : 'Status updated.');
     } catch (e) { this.say(errorText(e), true); }
     await this.load();
@@ -534,14 +545,36 @@ export class Appointments implements OnInit {
     return this.plansByType(type).some((p) => Number(p.balance) >= required);
   }
 
-  async completeWith(type: 'hours' | 'rupees' | null) {
-    if (!(await this.confirm.ask(type ? `Deduct from the ${type} membership?` : 'Complete without using a membership?', '', 'Yes, continue', false))) return;
+  maxBal(type: 'hours' | 'rupees') { return Math.max(0, ...this.plansByType(type).map((p) => Number(p.balance))); }
+  unpaidPlans() { return this.plansByType('hours').concat(this.plansByType('rupees')).filter((p) => !p.paid_at); }
+  expiredPlans() { const d = today(); return this.completionPlans().filter((p) => Number(p.balance) > 0 && p.expires_on && p.expires_on < d); }
+  receipt = signal('');
+  bookPreview() {
+    const t = this.bookPlan as 'hours' | 'rupees';
+    const bal = this.activePlans().filter((p) => p.plan_type === t).reduce((s, p) => s + Number(p.balance), 0);
+    if (t !== 'hours') return { text: `₹${bal.toLocaleString('en-IN')} available`, short: false };
+    const need = Number(this.bookHours || this.serviceMinutes() / 60);
+    return bal >= need ? { text: `Will deduct ${need} hrs · ${+(bal - need).toFixed(2)} hrs left after`, short: false }
+      : { text: `Only ${bal} hrs left — short by ${+(need - bal).toFixed(2)} hrs. Deduct at completion instead.`, short: true };
+  }
+  private receiptFor(a: Appointment, d: { amount: number; unit: string; remaining_balance: number; balance_due?: number } | null) {
+    const n = (a.phone ?? '').replace(/\D/g, ''); if (!n) return '';
+    const to = n.length === 10 ? '91' + n : n;
+    const used = d ? ` ${d.unit === 'hours' ? d.amount + ' hrs' : '₹' + d.amount} used from your membership, ${d.unit === 'hours' ? d.remaining_balance + ' hrs' : '₹' + d.remaining_balance} left.` : '';
+    const due = d?.balance_due ? ` Balance to pay: ₹${d.balance_due}.` : '';
+    return `https://wa.me/${to}?text=${encodeURIComponent(`Hi ${a.customer}, thank you for visiting! ${a.service} done.${used}${due}`)}`;
+  }
+
+  async completeWith(type: 'hours' | 'rupees' | null, partial = false) {
     const a = this.pendingCompletion();
     if (!a) return;
-    if (type && !this.canDeduct(type, a)) return;
+    const warn = type && this.unpaidPlans().some((p) => p.plan_type === type) ? 'Note: a membership payment is still pending.' : '';
+    const what = partial ? `Use the ${type} left on the membership and collect the rest?` : type ? `Deduct from the ${type} membership?` : 'Complete without using a membership?';
+    if (!(await this.confirm.ask(what, warn, 'Yes, continue', false))) return;
+    if (type && !partial && !this.canDeduct(type, a)) return;
     try {
-      type D = { plan_deduction: { plan_name: string; amount: number; unit: 'hours' | 'rupees'; remaining_balance: number } | null };
-      const extra = type === 'hours' && this.deductHours != null ? { deduct_amount: Number(this.deductHours) } : {};
+      type D = { plan_deduction: { plan_name: string; amount: number; unit: 'hours' | 'rupees'; remaining_balance: number; balance_due?: number } | null };
+      const extra = { ...(type === 'hours' && this.deductHours != null && !partial ? { deduct_amount: Number(this.deductHours) } : {}), ...(partial ? { partial: true } : {}) };
       const result = this.planOnly()
         ? await this.api.post<D>('/appointments/' + a.id + '/plan', { status: 'booked', plan_type: type, ...extra })
         : await this.api.patch<D>('/appointments/' + a.id + '/status', { status: 'completed', ...(type ? { plan_type: type } : {}), ...extra });
@@ -549,7 +582,8 @@ export class Appointments implements OnInit {
       const d = result.plan_deduction;
       this.say(d
         ? (this.planOnly() ? 'Paid from plan. Deducted ' : 'Completed. Deducted ') + d.amount.toFixed(2) + ' ' + d.unit + ' from ' + d.plan_name + '; remaining balance ' + d.remaining_balance.toFixed(2) + '.'
-        : 'Appointment completed without prepaid-plan deduction.');
+        : 'Appointment completed without prepaid-plan deduction.') + (d?.balance_due ? ` Collect Rs ${d.balance_due} for the rest.` : '');
+      this.receipt.set(this.planOnly() ? '' : this.receiptFor(a, d));
       this.pendingCompletion.set(null);
       this.completionPlans.set([]);
       await this.load();

@@ -11,6 +11,8 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
 
 import { RouterLink } from '@angular/router';
 import { Confirm } from '../shared/confirm';
+import { exportTable } from '../shared/export';
+type Hist = { id: number; created_at: string; plan: string; service: string; amount: number; unit: string; covered: number | null; reversed_at: string | null; done_by: string | null };
 @Component({
   selector: 'app-customers', imports: [RouterLink, DurationPipe, FormsModule, DecimalPipe],
   styles: [`
@@ -127,6 +129,15 @@ import { Confirm } from '../shared/confirm';
         </div>
       } @else { <small>No membership plans yet. {{ auth.isAdmin() ? 'Add them in the Memberships tab.' : 'Ask an admin to add them.' }}</small> }
       @if (planMsg()) { <div class="msg" [class.err]="planErr()">{{ planMsg() }}</div> }
+      <h3 style="margin-top:14px">Membership usage history
+        <button class="s" (click)="loadHist(c.id)">{{ hist() ? 'Refresh' : 'Show' }}</button>
+        @if (hist()?.length) { <button class="s" (click)="exportHist(c.name, 'pdf')">PDF</button><button class="s" (click)="exportHist(c.name, 'xlsx')">Excel</button> }</h3>
+      @if (hist(); as h) {
+        <div class="wrap"><table><tr><th>Date</th><th>Plan</th><th>Service</th><th class="num">Used</th><th>Status</th><th>By</th></tr>
+          @for (r of h; track r.id) { <tr><td>{{ r.created_at.slice(0, 16).replace('T', ' ') }}</td><td>{{ r.plan }}</td><td>{{ r.service }}</td>
+            <td class="num">{{ r.unit === 'hours' ? r.amount + ' hrs' : '₹' + r.amount }}</td><td>{{ r.reversed_at ? 'Returned' : r.covered != null ? 'Part-paid' : 'Used' }}</td><td>{{ r.done_by || '—' }}</td></tr>
+          } @empty { <tr><td colspan="6">No deductions yet.</td></tr> }</table></div>
+      }
 
       <h3>Payment history</h3>
       <div class="wrap"><table><tr><th>Receipt</th><th>Received</th><th>Appointment</th><th>Method</th><th class="num">Received</th><th class="num">Refunded</th><th></th></tr>
@@ -230,6 +241,12 @@ export class Customers implements OnInit {
   private searchTimer?: ReturnType<typeof setTimeout>;
   hf = { from: '', to: '', therapist: '', service: '', status: '' };
   ngOnInit() { return this.load(); }
+  hist = signal<Hist[] | null>(null);
+  async loadHist(cid: number) { try { this.hist.set(await this.api.get<Hist[]>(`/customers/${cid}/plan-history`)); } catch (e) { this.planErr.set(true); this.planMsg.set(errorText(e)); } }
+  exportHist(name: string, ext: 'pdf' | 'xlsx') {
+    return exportTable(this.api, ext, 'Membership usage · ' + name, '', ['Date', 'Plan', 'Service', 'Used', 'Unit', 'Status', 'By'],
+      (this.hist() ?? []).map((r) => [r.created_at.slice(0, 16).replace('T', ' '), r.plan, r.service, +r.amount, r.unit, r.reversed_at ? 'Returned' : r.covered != null ? 'Part-paid' : 'Used', r.done_by ?? '']));
+  }
   /** The customer's visits, narrowed by the history filters (dates are the spa's local days, both included). */
   history(c: Customer) {
     const f = this.hf;
@@ -289,7 +306,7 @@ export class Customers implements OnInit {
   private pkgLoaded = false;
   async open(id: number) {
     if (!this.pkgLoaded) { this.pkgLoaded = true; this.api.get<PlanPackage[]>('/plan-packages').then((p) => this.packages.set(p)).catch(() => (this.pkgLoaded = false)); }
-    this.form = null; this.clearHist();
+    this.form = null; this.clearHist(); this.hist.set(null);
     try { this.sel.set(await this.api.get<Customer>(`/customers/${id}`)); } catch (e) { this.err.set(errorText(e)); }
   }
   async addPlan(id: number) {

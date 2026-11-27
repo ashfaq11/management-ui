@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Api } from '../core/api';
+import { Api, errorText } from '../core/api';
+import { Confirm } from './confirm';
 import { Appointment, CustomerPlan } from '../core/models';
 import { DurationPipe } from './duration.pipe';
 
@@ -72,7 +73,9 @@ const PAY: Record<string, [string, string]> = {
           <div><span>Visits so far</span><b>{{ visits() ?? '…' }}</b></div>
           @if (a.notes) { <div style="grid-column:1/-1"><span>Notes</span><b>{{ a.notes }}</b></div> }
         </div>
+        @if (msg()) { <div class="msg" [class.err]="err()">{{ msg() }}</div> }
         <div class="acts">
+          @if (a.status === 'booked') { <button class="p" style="margin:0" [disabled]="busy()" (click)="complete(a)">✓ Complete</button> }
           @if (a.phone) { <a class="s" [href]="'tel:' + a.phone"><button class="s">Call</button></a>
             <a [href]="wa(a)" target="_blank" rel="noopener"><button class="s">WhatsApp reminder</button></a> }
           <a routerLink="/appointments" (click)="sel.set(null)"><button class="p" style="margin:0">Open in appointments</button></a>
@@ -83,7 +86,24 @@ const PAY: Record<string, [string, string]> = {
   }`,
 })
 export class TodayBookings implements OnInit {
-  private api = inject(Api);
+  private api = inject(Api); private confirm = inject(Confirm);
+  msg = signal(''); err = signal(false); busy = signal(false);
+  /** One tap: completes, taking the visit's hours from a paid membership with enough balance (or none). */
+  async complete(a: Appointment) {
+    const need = Math.round(Number(a.duration_min) / 60 * 100) / 100;
+    const plan = a.payment_status === 'prepaid' ? null : this.plans().find((p) => p.plan_type === 'hours' && p.paid_at
+      && Number(p.balance) >= need && (!p.expires_on || p.expires_on >= this.today));
+    const detail = a.payment_status === 'prepaid' ? 'Already paid from the membership.'
+      : plan ? `Deduct ${need} hrs from ${plan.name} · ${+(Number(plan.balance) - need).toFixed(2)} hrs left after.`
+      : `No membership with enough hours · ₹${(+a.price).toLocaleString('en-IN')} to collect.`;
+    if (!(await this.confirm.ask(`Complete ${a.customer}'s ${a.service}?`, detail, 'Complete'))) return;
+    this.busy.set(true); this.msg.set('');
+    try {
+      await this.api.patch('/appointments/' + a.id + '/status', { status: 'completed', ...(plan ? { plan_type: 'hours' } : {}) });
+      this.msg.set('Completed.' + (plan ? ` ${need} hrs deducted.` : '')); this.err.set(false);
+      await this.ngOnInit(); const u = this.rows().find((x) => x.id === a.id); if (u) this.sel.set(u);
+    } catch (e) { this.msg.set(errorText(e)); this.err.set(true); } finally { this.busy.set(false); }
+  }
   rows = signal<Appointment[]>([]); sel = signal<Appointment | null>(null);
   plans = signal<CustomerPlan[]>([]); visits = signal<number | null>(null);
   counts = computed(() => {
@@ -114,7 +134,7 @@ export class TodayBookings implements OnInit {
     try { this.rows.set(await this.api.get<Appointment[]>('/appointments', { from: this.today, to: this.today })); } catch { /* dashboard still loads */ }
   }
   async open(a: Appointment) {
-    this.sel.set(a); this.plans.set([]); this.visits.set(null);
+    this.sel.set(a); this.plans.set([]); this.msg.set(''); this.visits.set(null);
     try {
       const c = await this.api.get<{ plans?: CustomerPlan[]; appointments?: { status: string }[] }>('/customers/' + a.customer_id);
       this.plans.set(c.plans ?? []); this.visits.set((c.appointments ?? []).filter((x) => x.status === 'completed').length);

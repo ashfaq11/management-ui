@@ -64,7 +64,9 @@ import { today } from '../core/util';
           <div>
             <label>Hours wallet balance</label>
             <h2>{{ availableBalance('hours') | number: '1.2-2' }} hrs</h2>
-            <p>Required for this appointment: {{ hoursNeeded(pending) | number: '1.2-2' }} hrs</p>
+            <label style="margin-top:6px">Hours to deduct</label>
+            <input type="number" min="0.25" step="0.25" style="max-width:140px" [ngModel]="deductHours ?? hoursNeeded(pending)" (ngModelChange)="deductHours = $event">
+            <small style="display:block">Default {{ hoursNeeded(pending) | number: '1.0-2' }} hrs from the booking; change if needed.</small>
             @for (p of plansByType('hours'); track p.id) {
               <small>{{ p.name }}: {{ p.balance | number: '1.2-2' }} hrs</small><br>
             }
@@ -386,11 +388,13 @@ export class Appointments implements OnInit {
     return this.plansByType(type).reduce((sum, p) => sum + Number(p.balance), 0);
   }
 
+  deductHours: number | null = null;
   hoursNeeded(a: Appointment) { return Math.round((Number(a.duration_min) / 60) * 100) / 100; }
   rupeesNeeded(a: Appointment) { return Math.round(Number(a.price) * 100) / 100; }
 
   canDeduct(type: 'hours' | 'rupees', a: Appointment) {
-    const required = type === 'hours' ? this.hoursNeeded(a) : this.rupeesNeeded(a);
+    const required = type === 'hours' ? Number(this.deductHours ?? this.hoursNeeded(a)) : this.rupeesNeeded(a);
+    if (!(required > 0)) return false;
     return this.plansByType(type).some((p) => Number(p.balance) >= required);
   }
 
@@ -400,7 +404,9 @@ export class Appointments implements OnInit {
     if (type && !this.canDeduct(type, a)) return;
     try {
       const result = await this.api.patch<{ plan_deduction: { plan_name: string; amount: number; unit: 'hours' | 'rupees'; remaining_balance: number } | null }>(
-        '/appointments/' + a.id + '/status', { status: 'completed', ...(type ? { plan_type: type } : {}) });
+        '/appointments/' + a.id + '/status', { status: 'completed', ...(type ? { plan_type: type } : {}),
+          ...(type === 'hours' && this.deductHours != null ? { deduct_amount: Number(this.deductHours) } : {}) });
+      this.deductHours = null;
       const d = result.plan_deduction;
       this.say(d
         ? 'Completed. Deducted ' + d.amount.toFixed(2) + ' ' + d.unit + ' from ' + d.plan_name + '; remaining balance ' + d.remaining_balance.toFixed(2) + '.'

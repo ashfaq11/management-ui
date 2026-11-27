@@ -6,7 +6,7 @@ import { today } from '../core/util';
 
 const CATS = ['Maintenance', 'Rent', 'Electricity & water', 'Supplies', 'Laundry', 'Repairs', 'Marketing', 'Other'];
 interface Line { id: number; on_date: string; category: string; name: string | null; amount: number; kind: 'one-off' | 'regular'; payment_method?: string | null; }
-interface Regular { id: number; name: string; category: string; amount: number; day_of_month: number; starts_on: string; ends_on: string | null; notes: string | null; }
+interface Regular { id: number; name: string; category: string; amount: number; day_of_month: number; starts_on: string; ends_on: string | null; notes: string | null; payment_method?: string; }
 interface Month { total: number; lines: Line[]; by_category: { category: string; amount: number }[]; regular: Regular[]; }
 
 @Component({
@@ -63,6 +63,8 @@ interface Month { total: number; lines: Line[]; by_category: { category: string;
         <div style="flex:0 0 170px"><label>Type</label><select [(ngModel)]="r.category">@for (c of cats; track c) {<option>{{ c }}</option>}</select></div>
         <div style="flex:0 0 110px"><label>Due day</label><input type="number" min="1" max="28" [(ngModel)]="r.day_of_month"></div>
         <div style="flex:0 0 160px"><label>From</label><input type="date" [(ngModel)]="r.starts_on"></div>
+        <div style="flex:0 0 150px"><label>Paid by</label><select [(ngModel)]="r.payment_method"><option value="cash">Cash</option><option value="upi">UPI</option>
+          <option value="card">Card</option><option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select></div>
       </div>
       <button class="p" (click)="saveR()">{{ rId() ? 'Save regular expense' : 'Add regular expense' }}</button>
       @if (rId()) { <button class="s" style="margin-left:8px" (click)="resetR()">Cancel</button> }
@@ -78,7 +80,7 @@ export class Expenses implements OnInit {
   f = this.blank(); r = this.blankR(); private rEnds: string | null = null;
 
   blank() { return { amount: null as number | null, note: '', on_date: today(), category: 'Maintenance', payment_method: 'cash' }; }
-  blankR() { return { name: '', amount: null as number | null, category: 'Rent', day_of_month: 1, starts_on: today().slice(0, 8) + '01' }; }
+  blankR() { return { name: '', amount: null as number | null, category: 'Rent', day_of_month: 1, starts_on: today().slice(0, 8) + '01', payment_method: 'cash' }; }
   async ngOnInit() { await this.load(); }
   async load() {
     try { this.data.set(await this.api.get<Month>('/expenses', { month: this.month })); } catch (e) { this.say(errorText(e), true); }
@@ -108,7 +110,7 @@ export class Expenses implements OnInit {
 
   editR(x: Regular) {
     this.rId.set(x.id); this.rEnds = x.ends_on;
-    this.r = { name: x.name, amount: +x.amount, category: x.category, day_of_month: x.day_of_month, starts_on: x.starts_on };
+    this.r = { name: x.name, amount: +x.amount, category: x.category, day_of_month: x.day_of_month, starts_on: x.starts_on, payment_method: x.payment_method ?? 'cash' };
   }
   resetR() { this.rId.set(null); this.rEnds = null; this.r = this.blankR(); }
   async saveR() {

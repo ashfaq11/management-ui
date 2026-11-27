@@ -6,6 +6,7 @@ import { Auth } from '../core/auth';
 import { Payment, PaymentReport } from '../core/models';
 import { today } from '../core/util';
 
+import { exportTable } from '../shared/export';
 @Component({
   selector: 'app-payments', imports: [FormsModule, DecimalPipe, DatePipe],
   styles: [`
@@ -37,7 +38,7 @@ import { today } from '../core/util';
     </div>
   }
   <div class="card">
-    <div class="row" style="align-items:center;justify-content:space-between"><h2>Payment ledger</h2>
+    <div class="row" style="align-items:center;justify-content:space-between"><h2 style="display:flex;align-items:center;gap:8px">Payment ledger <span style="display:inline-flex;gap:6px;margin-left:auto"><button class="s" (click)="exp('pdf')">PDF</button><button class="s" (click)="exp('xlsx')">Excel</button></span></h2>
       <button class="s" (click)="load()" [disabled]="loading()">{{ loading() ? 'Loading...' : 'Refresh' }}</button></div>
     <div class="wrap"><table>
       <tr><th>Type</th><th>Time</th><th>Customer</th><th>Appointment</th><th>Method</th><th class="num">Amount</th><th>Reference / note</th><th></th></tr>
@@ -143,6 +144,16 @@ export class Payments implements OnInit {
       const a = document.createElement('a'); a.href=url;
       a.download = 'receipt_SP-'+(p.payment_id || p.id).toString().padStart(6,'0')+'.pdf'; a.click();
       URL.revokeObjectURL(url);
+    } catch (e) { this.error.set(errorText(e)); }
+  }
+  async exp(ext: 'pdf' | 'xlsx') {
+    try {
+      await exportTable(this.api, ext, 'Payments', this.day, ['Type', 'Time', 'Customer', 'Method', 'Amount', 'Reference / note'],
+        this.rows().map((p) => {
+          const x = p as unknown as Record<string, unknown>;
+          return [x['event_type'] === 'refund' ? 'Refund' : 'Payment', String(x['received_at'] ?? x['refunded_at'] ?? '').replace('T', ' ').slice(0, 16),
+            x['customer'] ?? '', x['method'] ?? '', Number(x['amount'] ?? 0), x['reference'] ?? x['reason'] ?? x['note'] ?? ''];
+        }));
     } catch (e) { this.error.set(errorText(e)); }
   }
 }

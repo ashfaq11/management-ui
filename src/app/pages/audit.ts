@@ -6,6 +6,7 @@ import { Auth } from '../core/auth';
 interface Row { id: number; at: string; username: string | null; role: string | null; action: string; method: string; path: string;
   details: Record<string, unknown> | null; ip: string | null; }
 
+import { exportTable } from '../shared/export';
 @Component({
   selector: 'app-audit', imports: [FormsModule],
   styles: [`.det{font-size:12px;color:var(--mut);max-width:420px;word-break:break-word}
@@ -19,6 +20,7 @@ interface Row { id: number; at: string; username: string | null; role: string | 
       <div style="flex:0 0 160px"><label>To</label><input type="date" [(ngModel)]="to" (change)="go(1)"></div>
       <div style="flex:0 0 auto"><button class="p" style="margin:0" (click)="go(1)">Search</button></div>
     </div>
+    <div style="display:flex;margin-top:8px"><span style="display:inline-flex;gap:6px;margin-left:auto"><button class="s" (click)="exp('pdf')">PDF</button><button class="s" (click)="exp('xlsx')">Excel</button></span></div>
     @if (err()) { <div class="msg err">{{ err() }}</div> }
     <div class="wrap" style="margin-top:10px"><table><tr><th>When</th><th>Who</th><th>Action</th><th>Details</th></tr>
       @for (r of rows(); track r.id) {
@@ -52,5 +54,11 @@ export class Audit implements OnInit {
     if (!d) return '';
     return Object.entries(d).filter(([, v]) => v !== null && v !== '' && typeof v !== 'object')
       .slice(0, 8).map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`).join(' · ');
+  }
+  async exp(ext: 'pdf' | 'xlsx') {
+    try {
+      await exportTable(this.api, ext, 'Audit log', `${this.from || 'start'} to ${this.to || 'today'}`, ['When', 'Who', 'Role', 'Action', 'Details'],
+        this.rows().map((r) => [this.when(r.at), r.username ?? '', r.role ?? '', r.action, this.summary(r.details)]));
+    } catch (e) { this.err.set(errorText(e)); }
   }
 }

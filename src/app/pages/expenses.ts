@@ -9,6 +9,7 @@ interface Line { id: number; on_date: string; category: string; name: string | n
 interface Regular { id: number; name: string; category: string; amount: number; day_of_month: number; starts_on: string; ends_on: string | null; notes: string | null; payment_method?: string; }
 interface Month { total: number; lines: Line[]; by_category: { category: string; amount: number }[]; regular: Regular[]; }
 
+import { exportTable } from '../shared/export';
 @Component({
   selector: 'app-expenses', imports: [FormsModule, DecimalPipe],
   template: `
@@ -31,6 +32,7 @@ interface Month { total: number; lines: Line[]; by_category: { category: string;
   <div class="card">
     <div class="row" style="align-items:center">
       <div style="flex:0 0 200px"><label>Month</label><input type="month" [(ngModel)]="month" (change)="load()"></div>
+      <div style="flex:0 0 auto;margin-top:14px"><span style="display:inline-flex;gap:6px;margin-left:auto"><button class="s" (click)="exp('pdf')">PDF</button><button class="s" (click)="exp('xlsx')">Excel</button></span></div>
       <div class="kpi" style="flex:0 0 200px;margin-top:14px"><span>Total this month</span><b>&#8377;{{ (data()?.total ?? 0) | number: '1.0-2' }}</b></div>
     </div>
     @if (data()?.by_category?.length) {
@@ -127,6 +129,14 @@ export class Expenses implements OnInit {
     try {
       await this.api.put(`/expenses/recurring/${x.id}`, { ...x, ends_on: end < x.starts_on ? x.starts_on : end });
       this.say(`${x.name} stopped from today; past months keep it.`); await this.load();
+    } catch (e) { this.say(errorText(e), true); }
+  }
+  async exp(ext: 'pdf' | 'xlsx') {
+    try {
+      const d = this.data();
+      await exportTable(this.api, ext, 'Expenses', this.month, ['Date', 'Reason', 'Type', 'Paid via', 'Kind', 'Amount'],
+        (d?.lines ?? []).map((x) => [x.on_date, x.name ?? '', x.category, x.payment_method ?? '', x.kind, Number(x.amount)])
+          .concat([['Total', '', '', '', '', Number(d?.total ?? 0)]]));
     } catch (e) { this.say(errorText(e), true); }
   }
 }

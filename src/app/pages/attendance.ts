@@ -8,6 +8,7 @@ interface Absence { id: number; therapist_id: number; therapist: string; on_date
 interface Att { therapist_id: number; therapist: string; scheduled: number; away: number; present: number; }
 const KINDS: Record<string, string> = { leave: 'Leave', sick: 'Sick', absent: 'Absent (no notice)', holiday: 'Holiday' };
 
+import { exportTable } from '../shared/export';
 @Component({
   selector: 'app-attendance', imports: [SearchSelect, FormsModule],
   template: `
@@ -27,7 +28,7 @@ const KINDS: Record<string, string> = { leave: 'Leave', sick: 'Sick', absent: 'A
 
   <div class="card">
     <div class="row" style="align-items:flex-end"><div style="flex:0 0 180px"><label>Month</label><input type="month" [(ngModel)]="month" (change)="load()"></div></div>
-    <h2 style="margin-top:10px">Days present</h2>
+    <h2 style="margin-top:10px;display:flex;align-items:center">Days present <span style="display:inline-flex;gap:6px;margin-left:auto"><button class="s" (click)="exp('pdf')">PDF</button><button class="s" (click)="exp('xlsx')">Excel</button></span></h2>
     <div class="wrap"><table><tr><th>Therapist</th><th class="num">Shift days</th><th class="num">Away</th><th class="num">Present</th></tr>
       @for (a of team(); track a.therapist_id) {
         <tr><td><b>{{ a.therapist }}</b></td><td class="num">{{ a.scheduled }}</td><td class="num">{{ a.away }}</td>
@@ -70,5 +71,12 @@ export class Attendance implements OnInit {
   }
   async remove(x: Absence) {
     try { await this.api.delete(`/absences/${x.id}`); await this.load(); } catch (e) { this.err.set(true); this.msg.set(errorText(e)); }
+  }
+  async exp(ext: 'pdf' | 'xlsx') {
+    try {
+      await exportTable(this.api, ext, 'Attendance', this.month, ['Therapist', 'Shift days', 'Away', 'Present'],
+        this.team().map((a) => [a.therapist, a.scheduled, a.away, a.present]).concat(
+          this.list().map((x) => [`Away: ${x.therapist}`, x.on_date, this.label(x.kind) + (x.half_day ? ' (half)' : ''), x.note ?? ''])));
+    } catch (e) { this.err.set(true); this.msg.set(errorText(e)); }
   }
 }

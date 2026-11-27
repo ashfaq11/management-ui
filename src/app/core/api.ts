@@ -43,6 +43,12 @@ export class Api {
   delete(path: string): Promise<unknown> {
     return firstValueFrom(this.http.delete(config.apiBase + path));
   }
+  /** POST a body and get a file back (server-made PDF / Excel). */
+  async postBlob(path: string, body: unknown): Promise<{ blob: Blob; name: string | null }> {
+    const r = await firstValueFrom(this.http.post(config.apiBase + path, body, { responseType: 'blob', observe: 'response' }));
+    const m = /filename="?([^";]+)"?/.exec(r.headers.get('Content-Disposition') ?? '');
+    return { blob: r.body!, name: m ? m[1] : null };
+  }
   /** A file download, with the server's standard file name from Content-Disposition. */
   async download(path: string): Promise<{ blob: Blob; name: string | null }> {
     const r = await firstValueFrom(this.http.get(config.apiBase + path, { responseType: 'blob', observe: 'response' }));

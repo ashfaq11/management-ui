@@ -36,7 +36,8 @@ import { today } from '../core/util';
   <div class="card"><h2>{{ editId() ? "Edit appointment #" + editId() : "Book appointment" }}</h2>
     <div class="grid">
       <div><label>Search customer</label><input name="customerSearch" [ngModel]="customerSearch" (ngModelChange)="searchCustomers($event)" placeholder="Search by customer name or phone number">
-        <select name="c" [ngModel]="f.customer_id" (ngModelChange)="pickCustomer($event)">
+        <select name="c" [ngModel]="f.customer_id ?? null" (ngModelChange)="pickCustomer($event)">
+          <option [ngValue]="null" disabled>Choose customer…</option>
           @for (c of filteredCustomers(); track c.id) { <option [ngValue]="c.id">{{ c.name }} - {{ c.phone }}</option> }
           @empty { <option disabled [ngValue]="null">No matching customers</option> }
         </select>
@@ -226,7 +227,7 @@ export class Appointments implements OnInit {
       this.api.get<Therapist[]>('/therapists'), this.api.get<Service[]>('/services')]);
     this.customers.set(c);
     this.therapists.set(t.filter((x) => x.is_active)); this.services.set(s.filter((x) => x.is_active));
-    this.f.customer_id = c[0]?.id; this.f.service_id = this.services()[0]?.id;
+    this.f.service_id = this.services()[0]?.id;
     await this.load();
   }
 
@@ -239,7 +240,8 @@ export class Appointments implements OnInit {
       if (sequence === this.customerSearchSequence) {
         this.customers.set(matches);
         // keep the box and the selection in step: pick the first match when the old choice is not in the results
-        if (value.trim() && !matches.some((c) => c.id === this.f.customer_id)) this.f.customer_id = matches[0]?.id;
+        if (value.trim() && matches.length === 1) this.pickCustomer(matches[0].id, false);
+        else if (!matches.some((c) => c.id === this.f.customer_id)) this.f.customer_id = undefined;
       }
     } catch (e) {
       if (sequence === this.customerSearchSequence) {
@@ -250,10 +252,10 @@ export class Appointments implements OnInit {
   }
 
   /** Choosing from the list fills the search box with that customer. */
-  pickCustomer(id: number) {
+  pickCustomer(id: number, fill = true) {
     this.f.customer_id = id;
     const c = this.customers().find((x) => x.id === id);
-    if (c) this.customerSearch = c.name;
+    if (c && fill) this.customerSearch = c.name;
   }
 
   filteredCustomers(): Customer[] {
@@ -405,7 +407,8 @@ export class Appointments implements OnInit {
   cancelEdit() {
     this.editId.set(null);
     this.slotValid = false;
-    this.f = { ...this.f, start_at: '', price: null, duration_min: null, notes: null };
+    this.f = { ...this.f, customer_id: undefined, start_at: '', price: null, duration_min: null, notes: null };
+    this.customerSearch = '';
   }
 
   async setStatus(a: Appointment, status: Status) {

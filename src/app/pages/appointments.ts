@@ -29,7 +29,13 @@ import { today } from '../core/util';
     .cal-week h4{font-size:12px;margin:0 0 8px;color:var(--mut)}
     .cal-week .cal-item{font-size:11px;white-space:normal}
     .collection{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end}
-    @media(max-width:760px){.cal-cell{min-height:74px;padding:4px}.cal-item{font-size:9px}.cal-week{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .agenda-filters{display:grid;grid-template-columns:minmax(180px,1.5fr) repeat(3,minmax(130px,1fr));gap:8px;margin:10px 0 14px}
+    .mobile-agenda{display:none}.mobile-appt{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--card);margin-bottom:9px}
+    .mobile-appt-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.mobile-appt-time{font-size:18px;font-weight:800;color:var(--acc);font-variant-numeric:tabular-nums}
+    .mobile-appt-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0;color:var(--mut);font-size:12px}
+    .mobile-appt-actions{display:flex;gap:7px;flex-wrap:wrap}.mobile-appt-actions select{width:auto;min-height:36px;padding:5px 8px}
+    @media(max-width:760px){.cal-cell{min-height:74px;padding:4px}.cal-item{font-size:9px}.cal-week{grid-template-columns:repeat(2,minmax(0,1fr))}.agenda-filters{grid-template-columns:1fr 1fr}.desktop-agenda{display:none}.mobile-agenda{display:block}}
+    @media(max-width:420px){.agenda-filters{grid-template-columns:1fr}.mobile-appt-meta{grid-template-columns:1fr 1fr}}
   `],
   template: `
   <div class="card"><h2>{{ editId() ? "Edit appointment #" + editId() : "Book appointment" }}</h2>
@@ -133,6 +139,16 @@ import { today } from '../core/util';
         @for (t of therapists(); track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }
       </select>
     </div>
+    <div class="agenda-filters">
+      <input aria-label="Search appointments" placeholder="Search customer, phone or service" [(ngModel)]="appointmentSearch">
+      <select aria-label="Filter by service" [(ngModel)]="serviceFilter"><option [ngValue]="null">All services</option>
+        @for (service of services(); track service.id) { <option [ngValue]="service.id">{{ service.name }}</option> }
+      </select>
+      <select aria-label="Filter by status" [(ngModel)]="statusFilter"><option value="all">All statuses</option>
+        @for (status of statuses; track status) { <option [value]="status">{{ status }}</option> }
+      </select>
+      <button class="s" type="button" (click)="clearAgendaFilters()">Clear filters</button>
+    </div>
     @if (calendarMode() === 'month') {
       <div class="cal-grid">
         @for (w of ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; track w) { <div class="cal-date" style="color:var(--mut);padding:4px">{{ w }}</div> }
@@ -159,10 +175,10 @@ import { today } from '../core/util';
         }
       </div>
     } @else {
-      <div class="wrap">
-        @if (rows().length) {
+      <div class="wrap desktop-agenda">
+        @if (filteredRows().length) {
           <table><tr><th>Time</th><th>Customer</th><th>Therapist</th><th>Service</th><th class="num">Price</th><th class="num">Paid</th><th class="num">Due</th><th>Payment status</th><th>Appointment status</th><th>Actions</th></tr>
-          @for (a of rows(); track a.id) {
+          @for (a of filteredRows(); track a.id) {
             <tr><td>{{ a.start_at.slice(11,16) }}</td><td>{{ a.customer }}<br><small>{{ a.phone }}</small></td>
               <td>{{ a.therapist }}</td><td>{{ a.service }}</td><td class="num">{{ a.price | number:'1.2-2' }}</td>
               <td class="num">{{ a.paid_amount || 0 | number:'1.2-2' }}</td><td class="num"><strong>{{ a.balance_due || 0 | number:'1.2-2' }}</strong></td>
@@ -179,7 +195,25 @@ import { today } from '../core/util';
               </td></tr>
           }
           </table>
-        } @else { <p>No appointments for this day.</p> }
+        } @else { <p>No appointments match these filters.</p> }
+      </div>
+      <div class="mobile-agenda">
+        @for (a of filteredRows(); track a.id) {
+          <article class="mobile-appt">
+            <div class="mobile-appt-head"><div><div class="mobile-appt-time">{{ a.start_at.slice(11,16) }}</div><strong>{{ a.customer }}</strong><small style="display:block">{{ a.phone }}</small></div>
+              <span class="pay-state" [class.pay-pending]="paymentState(a)==='pending'" [class.pay-partial]="paymentState(a)==='partial'"
+                [class.pay-paid]="paymentState(a)==='paid'" [class.pay-prepaid]="paymentState(a)==='prepaid'">{{ paymentLabel(a) }}</span></div>
+            <div class="mobile-appt-meta"><span>Therapist: <strong>{{ a.therapist }}</strong></span><span>Service: <strong>{{ a.service }}</strong></span>
+              <span>Price: <strong>₹{{ a.price | number:'1.2-2' }}</strong></span><span>Due: <strong>₹{{ a.balance_due || 0 | number:'1.2-2' }}</strong></span></div>
+            <div class="mobile-appt-actions">
+              @if (a.status === 'booked') { <button class="s" (click)="edit(a)">Edit / reschedule</button> }
+              @if ((a.balance_due ?? 0) > 0 && (a.status === 'booked' || a.status === 'completed')) { <button class="s" (click)="startPayment(a)">Collect payment</button> }
+              <select aria-label="Appointment status" [ngModel]="a.status" (ngModelChange)="setStatus(a, $event)">
+                @for (status of statuses; track status) { <option [value]="status">{{ status }}</option> }
+              </select>
+            </div>
+          </article>
+        } @empty { <p>No appointments match these filters.</p> }
       </div>
     }
     @if (calendarMode() !== 'day') {
@@ -197,6 +231,9 @@ export class Appointments implements OnInit {
   rows = signal<Appointment[]>([]); day = signal(today());
   calendarMode = signal<'day'|'week'|'month'>('day');
   therapistFilter: number | null = null;
+  serviceFilter: number | null = null;
+  statusFilter: Status | 'all' = 'all';
+  appointmentSearch = '';
   collecting = signal<Appointment | null>(null);
   paymentAmount: number | null = null; paymentMethod: PaymentMethod = 'cash';
   paymentReference = ''; paymentNote = ''; savingPayment = signal(false); paymentError = signal('');
@@ -262,7 +299,14 @@ export class Appointments implements OnInit {
     const d = new Date(from + 'T12:00:00');
     return Array.from({length:count},(_,i)=>{ const x=new Date(d); x.setDate(x.getDate()+i); return x.toISOString().slice(0,10); });
   }
-  appointmentsFor(date: string) { return this.rows().filter(a=>a.start_at.slice(0,10)===date); }
+  filteredRows() {
+    const q=this.appointmentSearch.trim().toLowerCase();
+    return this.rows().filter(a=>(this.serviceFilter===null || a.service_id===this.serviceFilter)
+      && (this.statusFilter==='all' || a.status===this.statusFilter)
+      && (!q || [a.customer,a.phone??'',a.service,a.therapist].some(v=>String(v).toLowerCase().includes(q))));
+  }
+  clearAgendaFilters() { this.appointmentSearch=''; this.serviceFilter=null; this.statusFilter='all'; }
+  appointmentsFor(date: string) { return this.filteredRows().filter(a=>a.start_at.slice(0,10)===date); }
   dayNumber(date: string) { return Number(date.slice(8,10)); }
   weekday(date: string) { return new Date(date+'T12:00:00').toLocaleDateString('en-IN',{weekday:'short'}); }
   periodLabel() {

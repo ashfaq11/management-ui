@@ -39,15 +39,17 @@ const PAY: Record<string, [string, string]> = {
       <span class="pill bad">{{ counts().missed }} cancelled / no-show</span><span class="pill gold">₹{{ due().toLocaleString('en-IN') }} due</span>
     </div>
     <div class="wrap"><table>
-      <tr><th>Time</th><th>Customer</th><th>Service</th><th>Duration</th><th>Therapist</th><th>Status</th><th>Payment</th><th class="num">Due</th></tr>
+      <tr><th>Time</th><th>Customer</th><th>Service</th><th>Duration</th><th>Therapist</th><th>Status</th><th>Payment</th><th class="num">Due</th><th></th></tr>
       @for (a of rows(); track a.id) {
         <tr class="trow" [class.now]="isNow(a)" (click)="open(a)">
           <td><b>{{ a.start_at.slice(11, 16) }}</b></td><td>{{ a.customer }}</td><td>{{ a.service }}</td>
           <td>{{ a.duration_min | dur }}</td><td>{{ a.therapist }}</td>
           <td><span class="pill" [class]="'pill ' + st(a)[1]">{{ st(a)[0] }}</span></td>
           <td><span class="pill" [class]="'pill ' + py(a)[1]">{{ py(a)[0] }}</span></td>
-          <td class="num">{{ a.balance_due ? '₹' + (+a.balance_due).toLocaleString('en-IN') : '—' }}</td></tr>
-      } @empty { <tr><td colspan="8">No bookings today.</td></tr> }
+          <td class="num">{{ a.balance_due ? '₹' + (+a.balance_due).toLocaleString('en-IN') : '—' }}</td>
+          <td>@if (a.phone && a.status === 'booked') { <a [href]="wa(a)" target="_blank" rel="noopener" (click)="$event.stopPropagation()" title="Send WhatsApp reminder"
+            style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;background:#25d366;color:#fff;font-size:12px;font-weight:600;text-decoration:none">WhatsApp</a> }</td></tr>
+      } @empty { <tr><td colspan="9">No bookings today.</td></tr> }
     </table></div>
   </section>
 

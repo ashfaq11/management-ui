@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { DayBoard } from '../shared/day-board';
 import { DurationPipe } from '../shared/duration.pipe';
 import { SearchSelect, therapistOptions } from '../shared/search-select';
+import { Auth } from '../core/auth';
 import { Api, errorText } from '../core/api';
 import { Appointment, Customer, CustomerPlan, PaymentMethod, STATUSES, Service, Status, Therapist } from '../core/models';
 import { WhenPicker } from '../shared/when-picker';
@@ -201,6 +202,8 @@ import { today } from '../core/util';
               <td><select [ngModel]="a.status" (ngModelChange)="setStatus(a, $event)">
                 @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }</select></td>
               <td style="white-space:nowrap">
+                @if (a.status === 'booked' && a.phone) { <a [href]="wa(a)" target="_blank" rel="noopener" title="Send WhatsApp reminder"
+                  style="display:inline-block;padding:4px 10px;border-radius:8px;background:#25d366;color:#fff;font-size:12.5px;font-weight:600;text-decoration:none;margin-right:4px">WhatsApp</a> }
                 @if (a.status === 'booked') { <button class="s" (click)="edit(a)">Edit</button>
                   @if (!a.paid_amount && a.payment_status !== 'prepaid') { <button class="s" (click)="usePlan(a)">Use membership</button> }
                   @if (a.payment_status === 'prepaid') { <button class="s" (click)="usePlan(a)">Change membership</button>
@@ -470,6 +473,14 @@ export class Appointments implements OnInit {
     await this.load();
   }
 
+  /** One-tap WhatsApp reminder: opens WhatsApp with the message typed; staff press send. Free. */
+  wa(a: Appointment) {
+    const n = (a.phone ?? '').replace(/\D/g, ''); const to = n.length === 10 ? '91' + n : n;
+    const when = new Date(a.start_at.slice(0, 16)).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+    const spa = this.auth.spaName() ?? 'our spa';
+    return `https://wa.me/${to}?text=${encodeURIComponent(`Hi ${a.customer}, a reminder of your ${a.service} at ${spa} on ${when} with ${a.therapist}. See you soon!`)}`;
+  }
+  private auth = inject(Auth);
   planOnly = signal(false);
   board = signal(false);
   openFromBoard(id: number) { this.board.set(false); setTimeout(() => document.getElementById('appt-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })); }

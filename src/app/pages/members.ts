@@ -1,3 +1,4 @@
+import { Wa } from '../shared/wa';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -47,7 +48,7 @@ type Row = (string | number | null)[];
   </div>`,
 })
 export class Members implements OnInit {
-  private api = inject(Api);
+  private api = inject(Api); private waT = inject(Wa);
   rows = signal<Row[]>([]); err = signal(''); q = signal(''); show = signal('all');
   private today = new Date().toISOString().slice(0, 10);
   n(v: unknown) { return Number(v ?? 0); }
@@ -62,11 +63,7 @@ export class Members implements OnInit {
   }
   low = computed(() => this.rows().filter((r) => this.isLow(r)).length);
   offer(r: Row) {
-    const n = String(r[9] ?? '').replace(/\D/g, ''); const to = n.length === 10 ? '91' + n : n;
-    const msg = this.state(r) === 'active'
-      ? `Hi ${r[0]}, your ${r[1]} membership has only ${this.unit(r, 5)} left. Top up now and keep enjoying your sessions!`
-      : `Hi ${r[0]}, your ${r[1]} membership has ended. Renew today and continue your sessions with us!`;
-    return `https://wa.me/${to}?text=${encodeURIComponent(msg)}`;
+    return this.waT.link(String(r[9] ?? ''), this.state(r) === 'active' ? 'topup' : 'renew', { name: String(r[0]), plan: String(r[1]), left: this.unit(r, 5) });
   }
   members = computed(() => new Set(this.rows().map((r) => r[0])).size);
   active = computed(() => this.rows().filter((r) => this.state(r) === 'active').length);

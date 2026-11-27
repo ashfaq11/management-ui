@@ -25,6 +25,12 @@ export function errorText(e: unknown): string {
 @Injectable({ providedIn: 'root' })
 export class Api {
   private http = inject(HttpClient);
+  private pending = 0;
+  /** While a save is in flight: a top progress bar, and buttons can't be pressed twice. */
+  private track<T>(p: Promise<T>): Promise<T> {
+    document.body.classList.toggle('busy', ++this.pending > 0);
+    return p.finally(() => document.body.classList.toggle('busy', --this.pending > 0));
+  }
 
   get<T>(path: string, params: Record<string, string | number | undefined> = {}): Promise<T> {
     let p = new HttpParams();
@@ -32,16 +38,16 @@ export class Api {
     return firstValueFrom(this.http.get<T>(config.apiBase + path, { params: p }));
   }
   post<T>(path: string, body: unknown): Promise<T> {
-    return firstValueFrom(this.http.post<T>(config.apiBase + path, body));
+    return this.track(firstValueFrom(this.http.post<T>(config.apiBase + path, body)));
   }
   put<T>(path: string, body: unknown): Promise<T> {
-    return firstValueFrom(this.http.put<T>(config.apiBase + path, body));
+    return this.track(firstValueFrom(this.http.put<T>(config.apiBase + path, body)));
   }
   patch<T>(path: string, body: unknown): Promise<T> {
-    return firstValueFrom(this.http.patch<T>(config.apiBase + path, body));
+    return this.track(firstValueFrom(this.http.patch<T>(config.apiBase + path, body)));
   }
   delete(path: string): Promise<unknown> {
-    return firstValueFrom(this.http.delete(config.apiBase + path));
+    return this.track(firstValueFrom(this.http.delete(config.apiBase + path)));
   }
   /** POST a body and get a file back (server-made PDF / Excel). */
   async postBlob(path: string, body: unknown): Promise<{ blob: Blob; name: string | null }> {

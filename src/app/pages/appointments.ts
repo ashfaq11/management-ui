@@ -1,3 +1,4 @@
+import { Wa } from '../shared/wa';
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -46,6 +47,9 @@ import { Confirm } from '../shared/confirm';
           @empty { <option disabled [ngValue]="null">No matching customers</option> }
         </select>
         <small>{{ customerSearch.trim() ? filteredCustomers().length + ' matching customers' : 'Showing first 5 customers. Search to find others.' }}</small>
+        @if (f.customer_id) { <div style="margin-top:4px">@if (activePlans().length) { <span class="pill" [class]="lowPlan() ? 'pill gold' : 'pill ok'">{{ lowPlan() ? 'Low balance' : 'Member' }} · {{ planSummary() }}</span> }
+          @else { <span class="pill acc">No membership</span> }
+          @if (lastVisit()) { <small style="margin-left:6px">Last: {{ lastVisit() }}</small> }</div> }
       </div>
       <div><label>Therapist</label><app-search-select [options]="tOpts()" [(value)]="f.therapist_id" placeholder="Search therapist…" /></div>
       <div><label>Service</label><select [(ngModel)]="f.service_id">
@@ -191,7 +195,7 @@ import { Confirm } from '../shared/confirm';
             <h4><button class="link" (click)="selectDay(d)">{{ weekday(d) }} · {{ dayNumber(d) }}</button></h4>
             @for (a of appointmentsFor(d); track a.id) {
               <div class="cal-item" [title]="a.customer + ' / ' + a.service">{{ a.start_at.slice(11,16) }} · {{ a.customer }}<small>{{ a.therapist }}</small></div>
-            } @empty { <small>No bookings</small> }
+            } @empty { <small>No bookings · <a href="" (click)="$event.preventDefault(); scrollTop()">+ Book one</a></small> }
           </section>
         }
       </div>
@@ -237,7 +241,7 @@ import { Confirm } from '../shared/confirm';
 export class Appointments implements OnInit {
   private confirm = inject(Confirm);
   tOpts = computed(() => therapistOptions(this.therapists()));
-  private api = inject(Api);
+  private api = inject(Api); private waT = inject(Wa);
   statuses = STATUSES;
   customers = signal<Customer[]>([]); customerSearch = ''; private customerSearchSequence = 0;
   therapists = signal<Therapist[]>([]); services = signal<Service[]>([]);
@@ -296,11 +300,23 @@ export class Appointments implements OnInit {
     const r = this.activePlans().filter((p) => p.plan_type === 'rupees').reduce((a, p) => a + Number(p.balance), 0);
     return [h ? `${h} hrs left` : '', r ? `₹${r.toLocaleString('en-IN')} left` : ''].filter(Boolean).join(', ');
   }
+  lastVisit = signal('');
+  scrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  lowPlan() { return this.activePlans().some((p) => (p.plan_type === 'hours' && +p.balance <= 2) || +p.balance / +p.purchased_amount <= 0.2); }
   private async loadCustPlans(id: number) {
-    this.custPlans.set([]); this.bookPlan = null; this.sellPkg = null;
+    this.custPlans.set([]); this.lastVisit.set(''); this.bookPlan = null; this.sellPkg = null;
     try {
-      const c = await this.api.get<{ plans?: CustomerPlan[] }>('/customers/' + id);
-      if (this.f.customer_id === id) this.custPlans.set(c.plans ?? []);
+      const c = await this.api.get<{ plans?: CustomerPlan[]; appointments?: Appointment[] }>('/customers/' + id);
+      if (this.f.customer_id === id) {
+        this.custPlans.set(c.plans ?? []);
+        const last = (c.appointments ?? []).find((x) => x.status === 'completed') ?? (c.appointments ?? [])[0];
+        this.lastVisit.set(last ? `${last.service} with ${last.therapist}, ${last.start_at.slice(0, 10)}` : '');
+        // suggest what they had last time, only into empty fields
+        if (last && !this.editId()) {
+          if (!this.f.therapist_id && this.therapists().some((t) => t.id === last.therapist_id && t.is_active)) this.f.therapist_id = last.therapist_id;
+          if (!this.f.service_id && this.services().some((x) => x.id === last.service_id && x.is_active)) this.f.service_id = last.service_id;
+        }
+      }
       if (!this.packages().length) this.packages.set(await this.api.get('/plan-packages'));
     } catch { /* plans are optional here */ }
   }
@@ -492,10 +508,9 @@ export class Appointments implements OnInit {
 
   /** One-tap WhatsApp reminder: opens WhatsApp with the message typed; staff press send. Free. */
   wa(a: Appointment) {
-    const n = (a.phone ?? '').replace(/\D/g, ''); const to = n.length === 10 ? '91' + n : n;
     const when = new Date(a.start_at.slice(0, 16)).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
     const spa = this.auth.spaName() ?? 'our spa';
-    return `https://wa.me/${to}?text=${encodeURIComponent(`Hi ${a.customer}, a reminder of your ${a.service} at ${spa} on ${when} with ${a.therapist}. See you soon!`)}`;
+    return this.waT.link(a.phone, 'reminder', { name: a.customer, service: a.service, spa, when, therapist: a.therapist, date: a.start_at.slice(0, 10), time: a.start_at.slice(11, 16) });
   }
   private auth = inject(Auth);
   planOnly = signal(false);
@@ -559,11 +574,10 @@ export class Appointments implements OnInit {
       : { text: `Only ${bal} hrs left — short by ${+(need - bal).toFixed(2)} hrs. Deduct at completion instead.`, short: true };
   }
   private receiptFor(a: Appointment, d: { amount: number; unit: string; remaining_balance: number; balance_due?: number } | null) {
-    const n = (a.phone ?? '').replace(/\D/g, ''); if (!n) return '';
-    const to = n.length === 10 ? '91' + n : n;
     const used = d ? ` ${d.unit === 'hours' ? d.amount + ' hrs' : '₹' + d.amount} used from your membership, ${d.unit === 'hours' ? d.remaining_balance + ' hrs' : '₹' + d.remaining_balance} left.` : '';
     const due = d?.balance_due ? ` Balance to pay: ₹${d.balance_due}.` : '';
-    return `https://wa.me/${to}?text=${encodeURIComponent(`Hi ${a.customer}, thank you for visiting! ${a.service} done.${used}${due}`)}`;
+    return this.waT.link(a.phone, 'receipt', { name: a.customer, service: a.service, spa: this.auth.spaName() ?? 'our spa', used, due,
+      left: d ? (d.unit === 'hours' ? d.remaining_balance + ' hrs' : '₹' + d.remaining_balance) : '' });
   }
 
   async completeWith(type: 'hours' | 'rupees' | null, partial = false) {

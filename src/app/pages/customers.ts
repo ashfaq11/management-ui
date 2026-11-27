@@ -1,3 +1,4 @@
+import { Wa } from '../shared/wa';
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -190,7 +191,7 @@ export class Customers implements OnInit {
   markVia = 'cash';
   payOf(v: unknown) { const m = String(v); return { paid: m !== 'pending', payment_method: m === 'pending' ? null : m }; }
 
-  private api = inject(Api);
+  private api = inject(Api); private waT = inject(Wa);
   auth = inject(Auth);
   form: Edit | null = null; formErr = signal('');
   planForm = { name: '', plan_type: 'hours' as 'hours' | 'rupees', amount: 0, price_paid: null as number | null, paid: 'cash', expires_on: '', notes: '' };
@@ -329,7 +330,7 @@ export class Customers implements OnInit {
     } catch (e) { this.planErr.set(true); this.planMsg.set(errorText(e)); }
   }
   async editFromList(id: number) { await this.open(id); const c = this.sel(); if (c) this.startEdit(c); }
-  wa(phone: string, name: string) { const n = phone.replace(/\D/g, ''); return `https://wa.me/${n.length === 10 ? '91' + n : n}?text=${encodeURIComponent('Hi ' + name + ', ')}`; }
+  wa(phone: string, name: string) { return this.waT.link(phone, 'hello', { name }); }
   startEdit(c: Customer) {
     this.formErr.set('');
     this.form = { name: c.name, phone: c.phone, email: c.email ?? '', gender: c.gender ?? '', dob: c.dob ?? '',

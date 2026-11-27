@@ -163,3 +163,7 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--acc)}
 
 html[data-size="large"] body{zoom:1.12}
 html[data-size="xl"] body{zoom:1.25}
+body.busy button{pointer-events:none;opacity:.6;cursor:progress}
+body.busy::before{content:'';position:fixed;z-index:9999;top:0;left:0;height:3px;width:40%;background:var(--acc,#2a7);animation:busybar 1s linear infinite}
+@keyframes busybar{from{left:-40%}to{left:100%}}
+.rlevel{margin:10px 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}

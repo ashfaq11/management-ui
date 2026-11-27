@@ -89,7 +89,7 @@ import { ConfirmHost } from '../shared/confirm';
       @if (auth.isAdmin()) { <a routerLink="/plans" routerLinkActive="on" (click)="menu.set(false)"><i>&#127915;</i>Membership Plans</a> }
       @if (auth.isAdmin()) {
         <p class="grp">Team</p>
-        <a routerLink="/staff" routerLinkActive="on" (click)="menu.set(false)"><i>&#128101;</i>Team &amp; shifts</a><a routerLink="/attendance" routerLinkActive="on" (click)="menu.set(false)"><i>&#10003;</i>Attendance</a><a routerLink="/payroll" routerLinkActive="on" (click)="menu.set(false)"><i>&#128176;</i>Payroll</a>
+        <a routerLink="/account" routerLinkActive="on" (click)="menu.set(false)"><i>&#9881;</i>Settings</a><a routerLink="/staff" routerLinkActive="on" (click)="menu.set(false)"><i>&#128101;</i>Team &amp; shifts</a><a routerLink="/attendance" routerLinkActive="on" (click)="menu.set(false)"><i>&#10003;</i>Attendance</a><a routerLink="/payroll" routerLinkActive="on" (click)="menu.set(false)"><i>&#128176;</i>Payroll</a>
         <p class="grp">Business</p>
         <a routerLink="/services" routerLinkActive="on" (click)="menu.set(false)"><i>&#10047;</i>Services</a><a routerLink="/expenses" routerLinkActive="on" (click)="menu.set(false)"><i>&#128203;</i>Expenses</a><a routerLink="/reports" routerLinkActive="on" (click)="menu.set(false)"><i>&#128202;</i>Reports</a>
       }

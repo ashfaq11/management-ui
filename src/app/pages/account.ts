@@ -1,3 +1,5 @@
+import { Confirm } from '../shared/confirm';
+import { Wa, WA_DEFAULTS, WA_KEYS, WA_LABELS } from '../shared/wa';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
@@ -14,6 +16,17 @@ import { SpaProfile, SpaProfileForm, blankProfile, profileBody, profileMissing }
       <app-spa-profile-form [(profile)]="prof" />
       <button class="p" (click)="saveProfile()">Save spa profile</button>
       @if (pmsg()) { <div class="msg" [class.err]="perr()">{{ pmsg() }}</div> }
+    </section>
+  }
+  @if (auth.isAdmin() && auth.hasSpa()) {
+    <section class="card" style="margin-bottom:16px">
+      <h2>WhatsApp messages</h2>
+      <p class="hint">Texts used by the WhatsApp buttons. Placeholders: {{ '{' }}name{{ '}' }}, {{ '{' }}service{{ '}' }}, {{ '{' }}when{{ '}' }}, {{ '{' }}date{{ '}' }}, {{ '{' }}time{{ '}' }}, {{ '{' }}therapist{{ '}' }}, {{ '{' }}spa{{ '}' }}, {{ '{' }}plan{{ '}' }}, {{ '{' }}left{{ '}' }}, {{ '{' }}used{{ '}' }}, {{ '{' }}due{{ '}' }}. Leave blank for the default.</p>
+      @for (k of waKeys; track k) {
+        <label>{{ waLabels[k] }}</label><textarea rows="2" [(ngModel)]="tpl[k]" [placeholder]="waDefaults[k]"></textarea>
+      }
+      <button class="p" (click)="saveTpl()">Save messages</button>
+      @if (tmsg()) { <div class="msg" [class.err]="terr()">{{ tmsg() }}</div> }
     </section>
   }
   @if (auth.isAdmin() && auth.hasSpa()) {
@@ -65,6 +78,14 @@ export class Account implements OnInit {
   private api = inject(Api);
   auth = inject(Auth);
   cur = ''; next = ''; again = ''; msg = signal(''); isErr = signal(false);
+  private wa = inject(Wa); private confirm = inject(Confirm);
+  waKeys = WA_KEYS; waLabels = WA_LABELS; waDefaults = WA_DEFAULTS;
+  tpl: Record<string, string> = {}; tmsg = signal(''); terr = signal(false);
+  async saveTpl() {
+    if (!(await this.confirm.ask('Save the WhatsApp messages?', '', 'Save'))) return;
+    try { const r = await this.api.put<Record<string, string>>('/spa/templates', this.tpl); this.wa.saved.set(r); this.terr.set(false); this.tmsg.set('Messages saved.'); }
+    catch (e) { this.terr.set(true); this.tmsg.set(errorText(e)); }
+  }
   prof = blankProfile(); profileOk = signal(true); pmsg = signal(''); perr = signal(false);
   async loadProfile() {
     const r = await this.api.get<Record<string, unknown> & { complete: boolean }>('/spa/profile');
@@ -88,6 +109,7 @@ export class Account implements OnInit {
 
   async ngOnInit() {
     if (!this.auth.isAdmin() || !this.auth.hasSpa()) return;
+    this.api.get<Record<string, string>>('/spa/templates').then((t) => (this.tpl = { ...t })).catch(() => undefined);
     void this.loadProfile().catch(() => undefined);
     try {
       const [logo, details] = await Promise.all([

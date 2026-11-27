@@ -1,3 +1,4 @@
+import { Wa } from './wa';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Api, errorText } from '../core/api';
@@ -50,7 +51,7 @@ const PAY: Record<string, [string, string]> = {
           <td class="num">{{ a.balance_due ? '₹' + (+a.balance_due).toLocaleString('en-IN') : '—' }}</td>
           <td>@if (a.phone && a.status === 'booked') { <a [href]="wa(a)" target="_blank" rel="noopener" (click)="$event.stopPropagation()" title="Send WhatsApp reminder"
             style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;background:#25d366;color:#fff;font-size:12px;font-weight:600;text-decoration:none">WhatsApp</a> }</td></tr>
-      } @empty { <tr><td colspan="9">No bookings today.</td></tr> }
+      } @empty { <tr><td colspan="9" style="text-align:center;padding:18px">No bookings today · <a routerLink="/appointments">+ Book now</a></td></tr> }
     </table></div>
   </section>
 
@@ -86,7 +87,7 @@ const PAY: Record<string, [string, string]> = {
   }`,
 })
 export class TodayBookings implements OnInit {
-  private api = inject(Api); private confirm = inject(Confirm);
+  private api = inject(Api); private confirm = inject(Confirm); private waT = inject(Wa);
   msg = signal(''); err = signal(false); busy = signal(false);
   /** One tap: completes, taking the visit's hours from a paid membership with enough balance (or none). */
   async complete(a: Appointment) {
@@ -126,9 +127,8 @@ export class TodayBookings implements OnInit {
   }
   endTime(a: Appointment) { const s = new Date(a.start_at.slice(0, 16)); return new Date(s.getTime() + Number(a.duration_min) * 60000).toTimeString().slice(0, 5); }
   wa(a: Appointment) {
-    const n = (a.phone ?? '').replace(/\D/g, ''); const to = n.length === 10 ? '91' + n : n;
-    const msg = `Hi ${a.customer}, a reminder of your ${a.service} today at ${a.start_at.slice(11, 16)} with ${a.therapist}. See you soon!`;
-    return `https://wa.me/${to}?text=${encodeURIComponent(msg)}`;
+    return this.waT.link(a.phone, 'reminder', { name: a.customer, service: a.service, when: 'today at ' + a.start_at.slice(11, 16),
+      therapist: a.therapist, spa: 'our spa', date: a.start_at.slice(0, 10), time: a.start_at.slice(11, 16) });
   }
   async ngOnInit() {
     try { this.rows.set(await this.api.get<Appointment[]>('/appointments', { from: this.today, to: this.today })); } catch { /* dashboard still loads */ }

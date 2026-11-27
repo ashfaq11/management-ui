@@ -7,38 +7,39 @@ import { Spa } from '../core/models';
 @Component({
   selector: 'app-shell', imports: [RouterOutlet, RouterLink, RouterLinkActive],
   styles: [`
-    header{position:sticky;top:0;z-index:10;background:linear-gradient(120deg,var(--hdr1) 0%,var(--hdr2) 55%,var(--hdr3) 100%);color:#fff;
-      box-shadow:0 4px 18px rgba(0,0,0,.16)}
-    .top{display:flex;align-items:center;gap:10px;max-width:1120px;margin:0 auto;padding:12px 16px 4px}
+    header{position:sticky;top:0;z-index:20;background:linear-gradient(120deg,var(--hdr1) 0%,var(--hdr2) 55%,var(--hdr3) 100%);color:#fff;box-shadow:0 4px 18px rgba(0,0,0,.16)}
+    .top{display:flex;align-items:center;gap:10px;max-width:1120px;margin:0 auto;padding:12px 16px}
     .brand{font-weight:700;font-size:17px;letter-spacing:.01em;display:flex;align-items:center;gap:9px;color:#fff;text-decoration:none}
-    .brand i{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.16);
-      font-style:normal;font-size:16px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+    .brand i{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.16);font-style:normal;font-size:16px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
     .brand img{width:38px;height:38px;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.12);padding:3px}
     .brand small{display:block;font-size:11px;font-weight:500;opacity:.75;color:#fff;letter-spacing:.04em;text-transform:uppercase}
     .sp{flex:1}
-    select.spa{width:auto;min-height:34px;max-width:200px;padding:5px 30px 5px 10px;border-radius:9px;font-size:13px;
-      background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3)}
+    select.spa{width:auto;min-height:34px;max-width:200px;padding:5px 30px 5px 10px;border-radius:9px;font-size:13px;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3)}
     select.spa option{color:#0f1c2e}
     .me{display:flex;align-items:center;gap:8px;color:#fff;text-decoration:none;font-size:13px;padding:4px 10px 4px 4px;border-radius:99px}
     .me:hover{background:rgba(255,255,255,.12)}
     .me b{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#fff;color:#0e6e6a;font-size:13px}
     .me span{line-height:1.15}.me em{display:block;font-style:normal;font-size:11px;opacity:.75;text-transform:capitalize}
-    .out{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:9px;padding:6px 12px;font-size:13px}
+    .out{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:9px;padding:7px 12px;font-size:13px;cursor:pointer}
     .out:hover{background:rgba(255,255,255,.12)}
-    nav{display:flex;gap:4px;overflow-x:auto;max-width:1120px;margin:0 auto;padding:6px 12px 10px;scrollbar-width:none}
-    nav::-webkit-scrollbar{display:none}
-    nav a{color:#fff;opacity:.82;text-decoration:none;padding:8px 14px;border-radius:99px;white-space:nowrap;font-size:14px;
-      transition:background .15s,opacity .15s}
-    nav a:hover{opacity:1;background:rgba(255,255,255,.1)}
-    nav a.on{opacity:1;background:#fff;color:#0e6e6a;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.12)}
-    .sep{width:1px;background:rgba(255,255,255,.25);margin:6px 4px}
+    nav{display:flex;align-items:center;gap:5px;max-width:1120px;margin:0 auto;padding:0 12px 10px;flex-wrap:wrap}
+    nav>a,.menu summary{color:#fff;opacity:.9;text-decoration:none;padding:8px 12px;border-radius:9px;white-space:nowrap;font-size:14px;cursor:pointer;list-style:none}
+    .menu summary::-webkit-details-marker{display:none}
+    .menu summary:after{content:'⌄';margin-left:7px;opacity:.75}
+    nav>a:hover,.menu summary:hover,.menu[open] summary{opacity:1;background:rgba(255,255,255,.13)}
+    nav a.on{opacity:1;background:#fff;color:#0e6e6a;font-weight:600}
+    .menu{position:relative}
+    .drop{position:absolute;top:calc(100% + 5px);left:0;min-width:190px;padding:6px;background:#fff;border:1px solid #e4e8ee;border-radius:12px;box-shadow:0 12px 30px rgba(15,25,40,.2);display:grid;gap:2px}
+    .drop a{color:#263445;text-decoration:none;padding:9px 11px;border-radius:8px;font-size:13px;white-space:nowrap}
+    .drop a:hover{background:#eef5f5;color:#08746e}
+    .drop a.on{background:#e5f3f1;color:#08746e;font-weight:650}
     main{max-width:1120px;margin:0 auto;padding:20px 16px 48px;animation:rise .25s ease-out}
-    @media(max-width:620px){.me span,.brand small{display:none}}`],
+    @media(max-width:620px){.top{flex-wrap:wrap}.me span,.brand small{display:none}nav{gap:3px;padding-inline:10px}.drop{position:fixed;left:10px;right:10px;top:auto;min-width:0}.menu{position:static}}
+  `],
   template: `
   <header>
     <div class="top">
-      <a class="brand" routerLink="/">@if (auth.spaLogo()) { <img [src]="auth.spaLogo()" alt="Spa logo"> } @else { <i>&#10047;</i> }<span>{{ auth.spaName() || 'StudioDesk' }}
-        @if (auth.isSuper()) { <small>Super admin</small> }</span></a>
+      <a class="brand" routerLink="/">@if (auth.spaLogo()) { <img [src]="auth.spaLogo()" alt="Spa logo"> } @else { <i>&#10047;</i> }<span>{{ auth.spaName() || 'StudioDesk' }}@if (auth.isSuper()) { <small>Super admin</small> }</span></a>
       <span class="sp"></span>
       @if (auth.isSuper() && spas().length) {
         <select class="spa" aria-label="Working in spa" (change)="pick($any($event.target).value)">
@@ -46,30 +47,32 @@ import { Spa } from '../core/models';
           @for (s of spas(); track s.id) { @if (s.is_active) { <option [value]="s.id" [selected]="auth.pick()?.id === s.id">{{ s.name }}</option> } }
         </select>
       }
-      <a class="me" routerLink="/account" title="My account"><b>{{ initial() }}</b>
-        <span>{{ auth.me()?.username }}<em>{{ auth.me()?.role }}</em></span></a>
+      <a class="me" routerLink="/account" title="My account"><b>{{ initial() }}</b><span>{{ auth.me()?.username }}<em>{{ auth.me()?.role }}</em></span></a>
       <button class="out" (click)="auth.logout()">Logout</button>
     </div>
-    <nav>
-      @if (auth.isSuper()) { <a routerLink="/spas" routerLinkActive="on">Spas</a><span class="sep"></span> }
+    <nav aria-label="Main navigation">
+      @if (auth.isSuper()) { <a routerLink="/spas" routerLinkActive="on">Spas</a> }
       @if (auth.hasSpa()) {
         <a routerLink="/dashboard" routerLinkActive="on">Dashboard</a>
-        <a routerLink="/appointments" routerLinkActive="on">Appointments</a>
-        <a routerLink="/onboarding" routerLinkActive="on">New customer</a>
-        <a routerLink="/customers" routerLinkActive="on">Customers</a>
-        <a routerLink="/payments" routerLinkActive="on">Payments</a>
+        <a routerLink="/appointments" routerLinkActive="on">Bookings</a>
+        <details class="menu"><summary>Customers</summary><div class="drop">
+          <a routerLink="/onboarding" routerLinkActive="on">New customer</a><a routerLink="/customers" routerLinkActive="on">Customer directory</a>
+        </div></details>
         @if (auth.isAdmin()) {
-          <a routerLink="/plans" routerLinkActive="on">Plans</a>
-          <a routerLink="/staff" routerLinkActive="on">Team &amp; shifts</a>
-          <a routerLink="/attendance" routerLinkActive="on">Attendance</a>
-          <a routerLink="/services" routerLinkActive="on">Services</a>
-          <a routerLink="/reports" routerLinkActive="on">Reports</a>
-          <a routerLink="/payroll" routerLinkActive="on">Payroll</a>
-          <a routerLink="/expenses" routerLinkActive="on">Expenses</a>
-          <a routerLink="/audit" routerLinkActive="on">Audit log</a>
+          <details class="menu"><summary>Finance</summary><div class="drop">
+            <a routerLink="/payments" routerLinkActive="on">Payments</a><a routerLink="/plans" routerLinkActive="on">Plans &amp; packages</a><a routerLink="/payroll" routerLinkActive="on">Payroll</a><a routerLink="/expenses" routerLinkActive="on">Expenses</a>
+          </div></details>
+          <details class="menu"><summary>Team &amp; services</summary><div class="drop">
+            <a routerLink="/staff" routerLinkActive="on">Team &amp; shifts</a><a routerLink="/attendance" routerLinkActive="on">Attendance</a><a routerLink="/services" routerLinkActive="on">Services</a>
+          </div></details>
+          <details class="menu"><summary>Reports</summary><div class="drop">
+            <a routerLink="/reports" routerLinkActive="on">Business reports</a><a routerLink="/audit" routerLinkActive="on">Audit log</a>
+          </div></details>
+        } @else {
+          <a routerLink="/payments" routerLinkActive="on">Payments</a>
         }
       }
-      @if (auth.isAdmin()) { <a routerLink="/users" routerLinkActive="on">Users</a> }
+      @if (auth.isAdmin()) { <details class="menu"><summary>Administration</summary><div class="drop"><a routerLink="/users" routerLinkActive="on">Users &amp; access</a><a routerLink="/account" routerLinkActive="on">Account settings</a></div></details> }
     </nav>
   </header>
   <main><router-outlet /></main>`,
@@ -80,7 +83,6 @@ export class Shell implements OnInit {
   initial = computed(() => (this.auth.me()?.username ?? '?').charAt(0).toUpperCase());
 
   constructor() {
-    // a superadmin lands on Spas until one is opened
     effect(() => { if (this.auth.isSuper() && !this.auth.pick() && (this.router.url === '/appointments' || this.router.url === '/dashboard')) this.router.navigateByUrl('/spas'); });
   }
   async ngOnInit() {

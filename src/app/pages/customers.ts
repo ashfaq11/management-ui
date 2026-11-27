@@ -3,7 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
 import { Auth } from '../core/auth';
-import { Customer, CustomerPage, Payment, PaymentMethod } from '../core/models';
+import { Customer, CustomerPage, Payment, PaymentMethod, PlanPackage } from '../core/models';
 import { today } from '../core/util';
 
 type Edit = { name: string; phone: string; email: string; gender: string; dob: string; address: string; notes: string; preferred_payment_method: PaymentMethod | '' };
@@ -108,8 +108,19 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
           }
         } @empty { <tr><td colspan="8">No prepaid plans yet.</td></tr> }
       </table></div>
+      <h4>Assign a plan</h4>
+      @if (packages().length) {
+        <div class="row" style="align-items:flex-end">
+          <div style="flex:2"><label>Plan package</label><select [(ngModel)]="assign.package_id">
+            <option [ngValue]="null">Choose a package…</option>
+            @for (k of packages(); track k.id) { @if (k.is_active) { <option [ngValue]="k.id">{{ pkgLabel(k) }}</option> } }</select></div>
+          <div style="flex:0 0 190px"><label>Payment</label><select [(ngModel)]="assign.paid"><option [ngValue]="true">Paid now</option><option [ngValue]="false">Pending (pay later)</option></select></div>
+          <div style="flex:0 0 auto"><button class="p" style="margin:0" (click)="assignPlan(c.id)" [disabled]="!assign.package_id">Assign plan</button></div>
+        </div>
+      } @else { <small>No plan packages yet. {{ auth.isAdmin() ? 'Add them under Therapists & services.' : 'Ask an admin to add them.' }}</small> }
+      @if (planMsg()) { <div class="msg" [class.err]="planErr()">{{ planMsg() }}</div> }
       @if (auth.isAdmin()) {
-      <h4>Add plan / package</h4>
+      <details class="sec"><summary>Custom plan <small>admin only, any amount and price</small></summary><div class="body">
       <div class="grid">
         <div><label>Plan name *</label><input [(ngModel)]="planForm.name" placeholder="e.g. 10 hour package"></div>
         <div><label>Balance type</label><select [(ngModel)]="planForm.plan_type">
@@ -122,10 +133,8 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
         <div style="flex:0 0 auto"><label>Payment</label><select [(ngModel)]="planForm.paid"><option [ngValue]="true">Paid now</option><option [ngValue]="false">Pending (pay later)</option></select></div>
       </div>
       <label>Plan notes</label><input [(ngModel)]="planForm.notes" placeholder="Optional package details">
-      <button class="p" style="margin-top:8px" (click)="addPlan(c.id)">Add customer plan</button>
-      @if (planMsg()) { <div class="msg" [class.err]="planErr()">{{ planMsg() }}</div> }
-      } @else {
-        <small>Only admins can add prepaid plans. Staff can view balances and redeem them when completing appointments.</small>
+      <button class="p" style="margin-top:8px" (click)="addPlan(c.id)">Add custom plan</button>
+      </div></details>
       }
       <h3>Payment history</h3>
       <div class="wrap"><table><tr><th>Receipt</th><th>Received</th><th>Appointment</th><th>Method</th><th class="num">Received</th><th class="num">Refunded</th><th></th></tr>
@@ -175,6 +184,18 @@ export class Customers implements OnInit {
   form: Edit | null = null; formErr = signal('');
   planForm = { name: '', plan_type: 'hours' as 'hours' | 'rupees', amount: 0, price_paid: null as number | null, paid: true, expires_on: '', notes: '' };
   planMsg = signal(''); planErr = signal(false);
+  packages = signal<PlanPackage[]>([]);
+  assign = { package_id: null as number | null, paid: true };
+  pkgLabel(k: PlanPackage) {
+    const gives = k.plan_type === 'hours' ? `${+k.amount} hrs` : `₹${(+k.amount).toLocaleString('en-IN')} wallet`;
+    return `${k.name} · ${gives} · ₹${(+k.price).toLocaleString('en-IN')}${k.validity_days ? ' · ' + k.validity_days + ' days' : ''}`;
+  }
+  async assignPlan(cid: number) {
+    try {
+      await this.api.post(`/customers/${cid}/plans/assign`, { package_id: this.assign.package_id, paid: this.assign.paid });
+      this.planErr.set(false); this.planMsg.set('Plan assigned.'); this.assign = { package_id: null, paid: true }; await this.open(cid);
+    } catch (x) { this.planErr.set(true); this.planMsg.set(errorText(x)); }
+  }
   planEdit: { id: number; mode: 'edit' | 'topup'; plan_type: 'hours' | 'rupees'; name: string; expires_on: string; notes: string; amount: number | null; price_paid: number | null; paid: boolean; note: string } | null = null;
   startPlan(p: { id: number; name: string; plan_type: 'hours' | 'rupees'; expires_on?: string | null; notes?: string | null }, mode: 'edit' | 'topup') {
     this.planMsg.set('');
@@ -264,7 +285,9 @@ export class Customers implements OnInit {
       const a=document.createElement('a');a.href=url;a.download=res.name||('receipt_SP-'+p.id.toString().padStart(6,'0')+'.pdf');a.click();URL.revokeObjectURL(url);
     } catch(e) { this.err.set(errorText(e)); }
   }
+  private pkgLoaded = false;
   async open(id: number) {
+    if (!this.pkgLoaded) { this.pkgLoaded = true; this.api.get<PlanPackage[]>('/plan-packages').then((p) => this.packages.set(p)).catch(() => (this.pkgLoaded = false)); }
     this.form = null; this.clearHist();
     try { this.sel.set(await this.api.get<Customer>(`/customers/${id}`)); } catch (e) { this.err.set(errorText(e)); }
   }

@@ -7,6 +7,9 @@ export interface Spa {
   id: number; name: string; is_active: boolean; created_at: string; admins: number; staff: number; customers: number;
   revenue_this_month: number;
 }
+export interface PlanPackage {
+  id: number; name: string; plan_type: 'hours' | 'rupees'; amount: number; price: number; validity_days: number | null; is_active: boolean;
+}
 export interface CustomerPlan {
   id: number; customer_id: number; name: string; plan_type: 'hours' | 'rupees';
   purchased_amount: number; balance: number; expires_on?: string | null; notes?: string | null;

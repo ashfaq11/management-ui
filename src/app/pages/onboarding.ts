@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
 import { Auth } from '../core/auth';
 import { WhenPicker } from '../shared/when-picker';
-import { PaymentMethod, Service, Therapist } from '../core/models';
+import { PaymentMethod, Service, Therapist, PlanPackage } from '../core/models';
 
 const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', address: '', notes: '' });
 
@@ -24,13 +24,17 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
     </div>
     <label>Notes (allergies, skin type, preferences)</label><textarea rows="2" [(ngModel)]="c.notes"></textarea>
 
-    @if (auth.isAdmin()) {
     <h2 style="margin-top:16px">Prepaid plan (optional)</h2>
-    <label style="display:flex;align-items:center;gap:8px;margin:8px 0 12px">
-      <input type="checkbox" [(ngModel)]="includePlan">
-      Add a prepaid plan when registering this customer
-    </label>
-    @if (includePlan) {
+    <div class="row" style="align-items:flex-end">
+      <div style="flex:2"><label>Plan</label><select [(ngModel)]="pkgChoice" (ngModelChange)="includePlan = $event === 'custom'">
+        <option [ngValue]="null">No plan</option>
+        @for (k of packages(); track k.id) { @if (k.is_active) { <option [ngValue]="k.id">{{ pkgLabel(k) }}</option> } }
+        @if (auth.isAdmin()) { <option value="custom">Custom plan (admin)…</option> }</select></div>
+      @if (pkgChoice !== null && pkgChoice !== 'custom') {
+        <div style="flex:0 0 190px"><label>Payment</label><select [(ngModel)]="pkgPaid"><option [ngValue]="true">Paid now</option><option [ngValue]="false">Pending (pay later)</option></select></div>
+      }
+    </div>
+    @if (includePlan && auth.isAdmin()) {
       <div class="grid">
         <div><label>Plan name *</label><input [(ngModel)]="plan.name" placeholder="e.g. 10 hour package"></div>
         <div><label>Plan balance type</label>
@@ -49,8 +53,6 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
       </div>
       <label>Plan notes</label><input [(ngModel)]="plan.notes" placeholder="Optional package details">
       <small>Hours and rupees are separate balances. The selected balance type is what staff can redeem later.</small>
-    }
-
     }
     
     <h2 style="margin-top:16px">First appointment (optional)</h2>
@@ -85,7 +87,14 @@ export class Onboarding implements OnInit {
   plan: { name: string; plan_type: 'hours' | 'rupees'; amount: number | null; price_paid: number | null; paid: boolean; expires_on: string; notes: string } =
     { name: '', plan_type: 'hours', amount: null, price_paid: null, paid: true, expires_on: '', notes: '' };
 
+  packages = signal<PlanPackage[]>([]);
+  pkgChoice: number | 'custom' | null = null; pkgPaid = true;
+  pkgLabel(k: PlanPackage) {
+    const gives = k.plan_type === 'hours' ? `${+k.amount} hrs` : `₹${(+k.amount).toLocaleString('en-IN')} wallet`;
+    return `${k.name} · ${gives} · ₹${(+k.price).toLocaleString('en-IN')}${k.validity_days ? ' · ' + k.validity_days + ' days' : ''}`;
+  }
   async ngOnInit() {
+    this.api.get<PlanPackage[]>('/plan-packages').then((p) => this.packages.set(p)).catch(() => undefined);
     const [t, s] = await Promise.all([this.api.get<Therapist[]>('/therapists'), this.api.get<Service[]>('/services')]);
     this.therapists.set(t.filter((x) => x.is_active)); this.services.set(s.filter((x) => x.is_active));
   }
@@ -99,7 +108,7 @@ export class Onboarding implements OnInit {
     this.duration_min = null;
     this.therapist_id = undefined;
     this.service_id = undefined;
-    this.includePlan = false;
+    this.includePlan = false; this.pkgChoice = null; this.pkgPaid = true;
     this.preferredPaymentMethod = '';
     this.plan = { name: '', plan_type: 'hours', amount: null, price_paid: null, paid: true, expires_on: '', notes: '' };
   }
@@ -121,6 +130,7 @@ export class Onboarding implements OnInit {
     const body: Record<string, unknown> = { name: this.c.name.trim(), phone: this.c.phone.trim() };
     for (const k of ['email', 'gender', 'dob', 'address', 'notes'] as const) body[k] = this.c[k] || null;
     body['preferred_payment_method'] = this.preferredPaymentMethod || null;
+    if (this.pkgChoice !== null && this.pkgChoice !== 'custom') body['package'] = { package_id: this.pkgChoice, paid: this.pkgPaid };
     if (this.includePlan) body['plan'] = {
       name: this.plan.name.trim(), plan_type: this.plan.plan_type, amount: Number(this.plan.amount),
       expires_on: this.plan.expires_on || null, notes: this.plan.notes.trim() || null,

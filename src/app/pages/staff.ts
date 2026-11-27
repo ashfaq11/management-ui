@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { PlanPackages } from './plan-packages';
 import { Api, errorText } from '../core/api';
 import { Service, Shift, ShiftAssignment, Therapist } from '../core/models';
 import { Bonuses } from './bonuses';
@@ -16,7 +17,7 @@ const mask = (v?: string) => (v ? (v.length > 4 ? '•••• ' + v.slice(-4) 
 const blankS = () => ({ name: '', price: 0, duration_min: 60 });
 
 @Component({
-  selector: 'app-staff', imports: [FormsModule, DecimalPipe, Bonuses],
+  selector: 'app-staff', imports: [PlanPackages, FormsModule, DecimalPipe, Bonuses],
   styles: [`
     .shift-intro{color:var(--mut);margin:-4px 0 16px;max-width:720px;line-height:1.5}
     .shift-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end}
@@ -136,6 +137,7 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
       </table></div>
     } @else { <div class="shift-empty">No weekly assignments yet. Therapists without a roster retain the default 09:00–21:00 booking window.</div> }
   </div>
+  <app-plan-packages />
   <div class="card"><h2>Services</h2>
     <div class="wrap"><table><tr><th>Name</th><th class="num">Price</th><th class="num">Minutes</th><th>Active</th><th></th></tr>
     @for (x of services(); track x.id) {

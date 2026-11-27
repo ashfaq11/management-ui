@@ -17,11 +17,11 @@ import { Confirm } from '../shared/confirm';
         @if (auth.isSuper()) { <td>{{ u.spa ?? '—' }}</td>
           <td>{{ u.last_login_at ? (u.last_login_at | date: 'd MMM y, h:mm a') : 'Never' }}<small style="display:block;color:var(--mut)">{{ u.login_count || 0 }} sign-ins</small></td> }
         <td>@if (auth.isSuper() && u.role !== 'superadmin') {
-          <select [ngModel]="u.role" (ngModelChange)="update(u, $event, !!u.is_active)">
+          <select #rl [ngModel]="u.role" (ngModelChange)="update(u, $event, !!u.is_active, rl)">
             <option value="staff">staff</option><option value="admin">admin</option></select>
           } @else { <span class="badge" [class.gold]="u.role !== 'staff'">{{ u.role }}</span> }</td>
         <td><input type="checkbox" style="width:auto" [checked]="!!u.is_active" [disabled]="!canChange(u)"
-              (change)="update(u, u.role, !u.is_active)"></td>
+              #ac (change)="update(u, u.role, !u.is_active, ac)"></td>
         <td>
           @if (resetId() === u.id) {
             <input type="password" placeholder="New password (8+)" style="width:170px" [(ngModel)]="newPw">
@@ -76,8 +76,8 @@ export class Users implements OnInit {
       this.say(`Created ${this.nu.trim()}`); this.nu = ''; this.np = ''; this.nr = 'staff'; await this.load();
     } catch (e) { this.say(errorText(e), true); }
   }
-  async update(u: User, role: string, active: boolean) {
-    if (!(await this.confirm.ask(`Update ${u.username}?`, `Role: ${role} · ${active ? 'active' : 'deactivated (signed out)'}`, 'Update', !active))) { await this.load(); return; }
+  async update(u: User, role: string, active: boolean, el?: HTMLInputElement | HTMLSelectElement) {
+    if (!(await this.confirm.ask(`Update ${u.username}?`, `Role: ${role} · ${active ? 'active' : 'deactivated (signed out)'}`, 'Update', !active))) { if (el instanceof HTMLSelectElement) el.value = u.role; else if (el) el.checked = !!u.is_active; await this.load(); return; }
     try { await this.api.put(`/users/${u.id}`, { role, is_active: active }); this.say(`Updated ${u.username}`); }
     catch (e) { this.say(errorText(e), true); }
     await this.load();

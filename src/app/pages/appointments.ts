@@ -200,7 +200,7 @@ import { Confirm } from '../shared/confirm';
               <td><span class="pay-state" [class.pay-pending]="paymentState(a)==='pending'"
                 [class.pay-partial]="paymentState(a)==='partial'" [class.pay-paid]="paymentState(a)==='paid'"
                 [class.pay-prepaid]="paymentState(a)==='prepaid'">{{ paymentLabel(a) }}</span></td>
-              <td><select [ngModel]="a.status" (ngModelChange)="setStatus(a, $event)">
+              <td><select #st [ngModel]="a.status" (ngModelChange)="setStatus(a, $event, st)">
                 @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }</select></td>
               <td style="white-space:nowrap">
                 @if (a.status === 'booked' && a.phone) { <a [href]="wa(a)" target="_blank" rel="noopener" title="Send WhatsApp reminder"
@@ -465,8 +465,8 @@ export class Appointments implements OnInit {
     this.customerSearch = '';
   }
 
-  async setStatus(a: Appointment, status: Status) {
-    if (status !== 'completed' && !(await this.confirm.ask(`Mark ${a.customer}'s appointment as ${status.replace('_', '-')}?`, status === 'cancelled' || status === 'no_show' ? 'Any membership hours taken will be returned.' : '', 'Yes, change', status === 'cancelled' || status === 'no_show'))) { await this.load(); return; }
+  async setStatus(a: Appointment, status: Status, el?: HTMLSelectElement) {
+    if (status !== 'completed' && !(await this.confirm.ask(`Mark ${a.customer}'s appointment as ${status.replace('_', '-')}?`, status === 'cancelled' || status === 'no_show' ? 'Any membership hours taken will be returned.' : '', 'Yes, change', status === 'cancelled' || status === 'no_show'))) { if (el) el.value = a.status; await this.load(); return; }
     if (status === 'completed') {
       await this.askCompletion(a);
       return;

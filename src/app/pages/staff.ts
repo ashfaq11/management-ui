@@ -37,7 +37,7 @@ import { Confirm } from '../shared/confirm';
       <tr [class.open]="viewId() === t.id"><td><button class="link" (click)="viewId.set(viewId() === t.id ? null : t.id)">{{ t.name }}</button></td>
         <td>{{ t.phone }}</td><td>{{ t.specialities }}</td>
         <td class="num">{{ t.fixed_salary | number: '1.2-2' }}</td><td class="num">{{ t.incentive_percent }}</td>
-        <td><input type="checkbox" style="width:auto" [checked]="!!t.is_active" (change)="toggleT(t)"></td>
+        <td><input type="checkbox" style="width:auto" #tc [checked]="!!t.is_active" (change)="toggleT(t, tc)"></td>
         <td><button class="s" (click)="editT(t)">Edit</button></td></tr>
       @if (viewId() === t.id) {
         <tr class="detail"><td colspan="7"><div class="dl">
@@ -144,7 +144,7 @@ import { Confirm } from '../shared/confirm';
     <div class="wrap"><table><tr><th>Name</th><th class="num">Price</th><th class="num">Minutes</th><th>Active</th><th></th></tr>
     @for (x of services(); track x.id) {
       <tr><td>{{ x.name }}</td><td class="num">{{ x.price | number: '1.2-2' }}</td><td class="num">{{ x.duration_min }}</td>
-        <td><input type="checkbox" style="width:auto" [checked]="!!x.is_active" (change)="toggleS(x)"></td>
+        <td><input type="checkbox" style="width:auto" #sc [checked]="!!x.is_active" (change)="toggleS(x, sc)"></td>
         <td><button class="s" (click)="editS(x)">Edit</button></td></tr>
     }</table></div>
     <h2 style="margin-top:14px">{{ sId() ? 'Edit service' : 'Add service' }}</h2>
@@ -229,8 +229,8 @@ export class Staff implements OnInit {
       this.resetT(); this.tm.set(''); await this.reload();
     } catch (e) { this.tm.set(errorText(e)); }
   }
-  async toggleT(x: Therapist) {
-    if (!(await this.confirm.ask(`${x.is_active ? 'Deactivate' : 'Activate'} ${x.name}?`, '', 'Yes', x.is_active))) { await this.reload(); return; }
+  async toggleT(x: Therapist, el?: HTMLInputElement) {
+    if (!(await this.confirm.ask(`${x.is_active ? 'Deactivate' : 'Activate'} ${x.name}?`, '', 'Yes', x.is_active))) { if (el) el.checked = !!x.is_active; await this.reload(); return; }
     try { await this.api.put(`/therapists/${x.id}`, { ...x, is_active: !x.is_active }); } catch (e) { this.tm.set(errorText(e)); }
     await this.reload();
   }
@@ -305,8 +305,8 @@ export class Staff implements OnInit {
       this.resetS(); this.sm.set(''); await this.reload();
     } catch (e) { this.sm.set(errorText(e)); }
   }
-  async toggleS(x: Service) {
-    if (!(await this.confirm.ask(`${x.is_active ? 'Hide' : 'Show'} ${x.name}?`, '', 'Yes', false))) { await this.reload(); return; }
+  async toggleS(x: Service, el?: HTMLInputElement) {
+    if (!(await this.confirm.ask(`${x.is_active ? 'Hide' : 'Show'} ${x.name}?`, '', 'Yes', false))) { if (el) el.checked = !!x.is_active; await this.reload(); return; }
     try { await this.api.put(`/services/${x.id}`, { ...x, is_active: !x.is_active }); } catch (e) { this.sm.set(errorText(e)); }
     await this.reload();
   }

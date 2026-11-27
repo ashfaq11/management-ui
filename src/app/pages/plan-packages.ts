@@ -16,7 +16,7 @@ import { Confirm } from '../shared/confirm';
       @for (k of list(); track k.id) {
         <tr><td><b>{{ k.name }}</b></td><td>{{ k.plan_type === 'hours' ? (k.amount | number: '1.0-2') + ' hours' : '₹' + (k.amount | number: '1.0-2') + ' wallet' }}</td>
           <td class="num">₹{{ k.price | number: '1.0-2' }}</td><td>{{ k.validity_days ? k.validity_days + ' days' : 'No expiry' }}</td>
-          <td><input type="checkbox" [checked]="k.is_active" (change)="toggle(k)"></td>
+          <td><input #kc type="checkbox" [checked]="k.is_active" (change)="toggle(k, kc)"></td>
           <td><button class="s" (click)="edit(k)">Edit</button></td></tr>
       } @empty { <tr><td colspan="6">No packages yet. Add your first one below.</td></tr> }
     </table></div>
@@ -58,8 +58,8 @@ export class PlanPackages implements OnInit {
       this.reset(); await this.load();
     } catch (e) { this.err.set(true); this.msg.set(errorText(e)); }
   }
-  async toggle(k: PlanPackage) {
-    if (!(await this.confirm.ask(`${k.is_active ? 'Hide' : 'Show'} ${k.name}?`, '', 'Yes', false))) { await this.load(); return; }
+  async toggle(k: PlanPackage, el?: HTMLInputElement) {
+    if (!(await this.confirm.ask(`${k.is_active ? 'Hide' : 'Show'} ${k.name}?`, '', 'Yes', false))) { if (el) el.checked = k.is_active; await this.load(); return; }
     try { await this.api.put(`/plan-packages/${k.id}`, this.body({ ...k, amount: +k.amount, price: +k.price, validity_days: k.validity_days ?? null, is_active: !k.is_active })); await this.load(); }
     catch (e) { this.err.set(true); this.msg.set(errorText(e)); }
   }

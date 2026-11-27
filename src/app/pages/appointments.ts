@@ -51,6 +51,14 @@ import { today } from '../core/util';
           [placeholder]="'' + serviceMinutes()">
         <div class="chips">@for (m of [30, 60, 90, 120]; track m) {<button type="button" [class.on]="f.duration_min === m" (click)="f.duration_min = m">{{ m }} min</button>}</div></div>
       <div><label>Notes</label><input [(ngModel)]="f.notes"></div>
+      @if (!editId()) {
+        <div><label>Pay from plan (optional)</label>
+          <select [(ngModel)]="bookPlan"><option [ngValue]="null">No — decide at completion</option>
+            <option value="hours">Deduct hours now</option><option value="rupees">Deduct rupees now</option></select></div>
+        @if (bookPlan === 'hours') {
+          <div><label>Hours to deduct</label><input type="number" min="0.25" step="0.25" [(ngModel)]="bookHours" [placeholder]="'' + (serviceMinutes() / 60)"></div>
+        }
+      }
     </div>
     <app-when-picker [(value)]="f.start_at" [(selectionValid)]="slotValid"
       [therapistId]="f.therapist_id" [durationMin]="duration()" [excludeId]="editId()" />
@@ -361,6 +369,7 @@ export class Appointments implements OnInit {
     }
   }
 
+  bookPlan: 'hours' | 'rupees' | null = null; bookHours: number | null = null;
   async save() {
     try {
       if (!this.f.start_at) throw new Error('Pick a date and a time');
@@ -370,8 +379,15 @@ export class Appointments implements OnInit {
       if (!body['duration_min']) delete body['duration_min'];
       if (!body['notes']) body['notes'] = null;
       const id = this.editId();
-      if (id) await this.api.put(`/appointments/${id}`, body); else await this.api.post('/appointments', body);
-      this.say(id ? 'Saved' : 'Booked'); this.day.set(this.f.start_at.slice(0, 10));
+      if (!id && this.bookPlan) {
+        body['plan_type'] = this.bookPlan;
+        if (this.bookPlan === 'hours' && this.bookHours) body['deduct_amount'] = Number(this.bookHours);
+      }
+      const r = id ? await this.api.put(`/appointments/${id}`, body)
+        : await this.api.post<{ plan_deduction?: { amount: number; unit: string; plan_name: string; remaining_balance: number } | null }>('/appointments', body);
+      const d = (r as { plan_deduction?: { amount: number; unit: string; plan_name: string; remaining_balance: number } | null })?.plan_deduction;
+      this.bookPlan = null; this.bookHours = null;
+      this.say(id ? 'Saved' : d ? `Booked · ${d.amount} ${d.unit} taken from ${d.plan_name} (left ${d.remaining_balance})` : 'Booked'); this.day.set(this.f.start_at.slice(0, 10));
       this.cancelEdit(); await this.load();
     } catch (e) { this.say(errorText(e), true); }
   }

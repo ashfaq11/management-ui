@@ -15,7 +15,7 @@ const PAY: Record<string, [string, string]> = {
 @Component({
   selector: 'app-today-bookings', imports: [RouterLink, DurationPipe],
   styles: [`
-    tr.row{cursor:pointer}tr.row:hover td{background:var(--acc-soft)}
+    tr.trow{cursor:pointer}tr.trow:hover td{background:var(--acc-soft)}
     tr.now td{box-shadow:inset 3px 0 0 var(--ok)}
     .pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11.5px;font-weight:600}
     .acc{background:var(--acc-soft);color:var(--acc)}.ok{background:var(--ok-soft);color:var(--ok)}
@@ -41,7 +41,7 @@ const PAY: Record<string, [string, string]> = {
     <div class="wrap"><table>
       <tr><th>Time</th><th>Customer</th><th>Service</th><th>Duration</th><th>Therapist</th><th>Status</th><th>Payment</th><th class="num">Due</th></tr>
       @for (a of rows(); track a.id) {
-        <tr class="row" [class.now]="isNow(a)" (click)="open(a)">
+        <tr class="trow" [class.now]="isNow(a)" (click)="open(a)">
           <td><b>{{ a.start_at.slice(11, 16) }}</b></td><td>{{ a.customer }}</td><td>{{ a.service }}</td>
           <td>{{ a.duration_min | dur }}</td><td>{{ a.therapist }}</td>
           <td><span class="pill" [class]="'pill ' + st(a)[1]">{{ st(a)[0] }}</span></td>

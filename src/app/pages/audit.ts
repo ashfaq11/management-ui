@@ -26,8 +26,8 @@ import { exportTable } from '../shared/export';
       @for (r of rows(); track r.id) {
         <tr><td style="white-space:nowrap">{{ when(r.at) }}</td>
           <td>{{ r.username || '—' }} <small style="color:var(--mut)">{{ r.role }}</small></td>
-          <td><span class="act">{{ r.action }}</span><span class="m">{{ r.path.replace('/api/', '') }}</span></td>
-          <td class="det">{{ summary(r.details) }}</td></tr>
+          <td><span class="act">{{ r.action }}</span>@if ($any(r).target) { <span class="m">{{ $any(r).target }}</span> }</td>
+          <td class="det">{{ summary(r.details, $any(r).names) }}</td></tr>
       } @empty { <tr><td colspan="4">Nothing recorded yet.</td></tr> }
     </table></div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
@@ -50,15 +50,15 @@ export class Audit implements OnInit {
     } catch (e) { this.err.set(errorText(e)); }
   }
   when(t: string) { return new Date(t).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
-  summary(d: Record<string, unknown> | null) {
+  summary(d: Record<string, unknown> | null, names: Record<string, string> = {}) {
     if (!d) return '';
     return Object.entries(d).filter(([, v]) => v !== null && v !== '' && typeof v !== 'object')
-      .slice(0, 8).map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`).join(' · ');
+      .slice(0, 8).map(([k, v]) => k in names ? `${k.replace(/_id$/, '').replace(/_/g, ' ')}: ${names[k]}` : `${k.replace(/_/g, ' ')}: ${v}`).join(' · ');
   }
   async exp(ext: 'pdf' | 'xlsx') {
     try {
       await exportTable(this.api, ext, 'Audit log', `${this.from || 'start'} to ${this.to || 'today'}`, ['When', 'Who', 'Role', 'Action', 'Details'],
-        this.rows().map((r) => [this.when(r.at), r.username ?? '', r.role ?? '', r.action, this.summary(r.details)]));
+        this.rows().map((r) => [this.when(r.at), r.username ?? '', r.role ?? '', r.action + ((r as any).target ? ' · ' + (r as any).target : ''), this.summary(r.details, (r as any).names)]));
     } catch (e) { this.err.set(errorText(e)); }
   }
 }

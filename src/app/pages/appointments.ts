@@ -68,7 +68,7 @@ import { today } from '../core/util';
   </div>
   @if (pendingCompletion(); as pending) {
     <div class="card">
-      <h2>Complete appointment #{{ pending.id }}</h2>
+      <h2>{{ planOnly() ? 'Pay from plan' : 'Complete appointment' }} #{{ pending.id }}</h2>
       <p>{{ pending.customer }} · {{ pending.service }} · {{ pending.duration_min }} min · Rs {{ pending.price | number: '1.2-2' }}</p>
       @if (pendingLoading()) {
         <p>Loading customer plan balances...</p>
@@ -100,7 +100,7 @@ import { today } from '../core/util';
         @if ((pending.paid_amount ?? 0) > 0) { <small class="shift-warn">A payment has already been recorded for this appointment. Refund it before using a prepaid plan.</small> }
         <small>The oldest eligible plan with enough balance will be used. Balances are not mixed between hours and rupees.</small>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-          <button class="s" (click)="completeWith(null)">Complete without plan deduction</button>
+          @if (!planOnly()) { <button class="s" (click)="completeWith(null)">Complete without plan deduction</button> }
           <button class="s" (click)="cancelCompletion()">Cancel</button>
         </div>
       }
@@ -181,7 +181,8 @@ import { today } from '../core/util';
               <td><select [ngModel]="a.status" (ngModelChange)="setStatus(a, $event)">
                 @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }</select></td>
               <td style="white-space:nowrap">
-                @if (a.status === 'booked') { <button class="s" (click)="edit(a)">Edit</button> }
+                @if (a.status === 'booked') { <button class="s" (click)="edit(a)">Edit</button>
+                  @if (!a.paid_amount && a.payment_status !== 'prepaid') { <button class="s" (click)="usePlan(a)">Use plan</button> } }
                 @if ((a.balance_due ?? 0) > 0 && (a.status === 'booked' || a.status === 'completed')) {
                   <button class="s" (click)="startPayment(a)">Collect</button>
                 }
@@ -419,7 +420,12 @@ export class Appointments implements OnInit {
     await this.load();
   }
 
-  private async askCompletion(a: Appointment) {
+  planOnly = signal(false);
+  /** Deduct from a plan now, before the visit (the appointment stays booked). */
+  usePlan(a: Appointment) { this.planOnly.set(true); void this.askCompletion(a, true); }
+
+  private async askCompletion(a: Appointment, planOnly = false) {
+    this.planOnly.set(planOnly);
     this.msg.set('');
     this.pendingCompletion.set(a);
     this.pendingLoading.set(true);
@@ -459,13 +465,15 @@ export class Appointments implements OnInit {
     if (!a) return;
     if (type && !this.canDeduct(type, a)) return;
     try {
-      const result = await this.api.patch<{ plan_deduction: { plan_name: string; amount: number; unit: 'hours' | 'rupees'; remaining_balance: number } | null }>(
-        '/appointments/' + a.id + '/status', { status: 'completed', ...(type ? { plan_type: type } : {}),
-          ...(type === 'hours' && this.deductHours != null ? { deduct_amount: Number(this.deductHours) } : {}) });
+      type D = { plan_deduction: { plan_name: string; amount: number; unit: 'hours' | 'rupees'; remaining_balance: number } | null };
+      const extra = type === 'hours' && this.deductHours != null ? { deduct_amount: Number(this.deductHours) } : {};
+      const result = this.planOnly()
+        ? await this.api.post<D>('/appointments/' + a.id + '/plan', { status: 'booked', plan_type: type, ...extra })
+        : await this.api.patch<D>('/appointments/' + a.id + '/status', { status: 'completed', ...(type ? { plan_type: type } : {}), ...extra });
       this.deductHours = null;
       const d = result.plan_deduction;
       this.say(d
-        ? 'Completed. Deducted ' + d.amount.toFixed(2) + ' ' + d.unit + ' from ' + d.plan_name + '; remaining balance ' + d.remaining_balance.toFixed(2) + '.'
+        ? (this.planOnly() ? 'Paid from plan. Deducted ' : 'Completed. Deducted ') + d.amount.toFixed(2) + ' ' + d.unit + ' from ' + d.plan_name + '; remaining balance ' + d.remaining_balance.toFixed(2) + '.'
         : 'Appointment completed without prepaid-plan deduction.');
       this.pendingCompletion.set(null);
       this.completionPlans.set([]);

@@ -68,7 +68,7 @@ export interface Appointment {
 }
 export interface Payslip {
   therapist_id: number; therapist: string; month: string; fixed_salary: number; services_count: number;
-  service_revenue: number; incentive_percent: number; incentive: number; extra_incentive: number; net_pay: number;
+  service_revenue: number; incentive_percent: number; incentive: number; deductions_total?: number; extra_incentive: number; net_pay: number;
 }
 export interface IncentiveReport { month: string; therapists: Payslip[]; total_incentive: number; total_payroll: number; }
 export interface ServiceTotal { service: string; count: number; minutes: number; revenue: number; }

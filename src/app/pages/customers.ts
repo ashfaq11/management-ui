@@ -9,8 +9,9 @@ import { today } from '../core/util';
 
 type Edit = { name: string; phone: string; email: string; gender: string; dob: string; address: string; notes: string; preferred_payment_method: PaymentMethod | '' };
 
+import { RouterLink } from '@angular/router';
 @Component({
-  selector: 'app-customers', imports: [DurationPipe, FormsModule, DecimalPipe],
+  selector: 'app-customers', imports: [RouterLink, DurationPipe, FormsModule, DecimalPipe],
   styles: [`
     .customer-list{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
     .customer-pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;flex-wrap:wrap}
@@ -37,7 +38,7 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
   </div>
   @if (sel(); as c) {
     <div class="card">@if (form) {
-        <h2>Edit customer</h2>
+        <h2>Edit customer details · {{ c.name }}</h2>
         <div class="grid">
           <div><label>Name *</label><input [(ngModel)]="form.name"></div>
           <div><label>Phone *</label><input [(ngModel)]="form.phone"></div>
@@ -54,7 +55,11 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
         <button class="s" style="margin-left:8px" (click)="form = null">Cancel</button>
         @if (formErr()) { <div class="msg err">{{ formErr() }}</div> }
       } @else {
-        <h2>{{ c.name }} <button class="s" style="margin-left:8px" (click)="startEdit(c)">Edit</button></h2>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <h2 style="margin:0;flex:1">{{ c.name }}</h2>
+          <a routerLink="/appointments"><button class="p" style="margin:0">Book appointment</button></a>
+          <button class="s" (click)="startEdit(c)">Edit customer details</button>
+        </div>
         <div class="profile-grid">
           <div class="profile-fact"><span>Phone</span><strong>{{ c.phone }}</strong></div>
           <div class="profile-fact"><span>Email</span><strong>{{ c.email || '—' }}</strong></div>
@@ -63,7 +68,7 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
         </div>
         @if (c.notes) { <p>{{ c.notes }}</p> }
       }
-      <h3>Available prepaid balances</h3>
+      <h3>Membership balance</h3>
       <div class="grid" style="margin-bottom:12px">
         <div><label>Hours available</label><h2>{{ availableBalance(c, 'hours') | number: '1.2-2' }} hrs</h2></div>
         <div><label>Rupees available</label><h2>Rs {{ availableBalance(c, 'rupees') | number: '1.2-2' }}</h2></div>
@@ -83,7 +88,7 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
                 <div style="margin-top:4px"><span class="badge" style="background:var(--gold-soft);color:var(--gold)">Top-up pending{{ x.price_paid ? ' · ₹' + (+x.price_paid).toLocaleString('en-IN') : '' }}</span>
                 @if (true) { <select style="width:auto;min-height:30px;padding:2px 26px 2px 8px;margin-left:6px" [(ngModel)]="markVia"><option value="cash">Cash</option><option value="upi">UPI</option><option value="card">Card</option><option value="bank_transfer">Bank</option><option value="other">Other</option></select><button class="s" style="margin-left:6px" (click)="markTopupPaid(c.id, x.id)">Mark paid</button> }</div> }</td>
             @if (auth.isAdmin()) { <td style="white-space:nowrap"><button class="s" (click)="startPlan(p, 'topup')">Top up</button>
-              <button class="s" (click)="startPlan(p, 'edit')">Edit</button></td> }</tr>
+              <button class="s" (click)="startPlan(p, 'edit')">Change expiry</button></td> }</tr>
           @if (planEdit?.id === p.id) {
             <tr class="detail"><td colspan="8">
               @if (planEdit!.mode === 'topup') {

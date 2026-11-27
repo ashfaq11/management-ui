@@ -35,30 +35,12 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
         <div style="flex:0 0 190px"><label>Payment</label><select [(ngModel)]="pkgPaid"><option value="cash">Paid · Cash</option><option value="upi">Paid · UPI</option><option value="card">Paid · Card</option><option value="bank_transfer">Paid · Bank transfer</option><option value="other">Paid · Other</option><option value="pending">Pending (pay later)</option></select></div>
       }
     </div>
-    @if (includePlan && auth.isAdmin()) {
-      <div class="grid">
-        <div><label>Plan name *</label><input [(ngModel)]="plan.name" placeholder="e.g. 10 hour package"></div>
-        <div><label>Plan balance type</label>
-          <select [(ngModel)]="plan.plan_type">
-            <option value="hours">Hours plan</option>
-            <option value="rupees">Rupees plan (INR)</option>
-          </select>
-        </div>
-        <div><label>{{ plan.plan_type === 'hours' ? 'Hours purchased *' : 'Rupees purchased *' }}</label>
-          <input type="number" min="0.01" step="0.01" [(ngModel)]="plan.amount">
-        </div>
-        <div><label>Plan cost (Rs, optional)</label>
-          <input type="number" min="0" step="1" [(ngModel)]="plan.price_paid" [placeholder]="plan.plan_type === 'rupees' ? 'same as amount' : 'e.g. 9000 for 10 hrs'"></div>
-        <div><label>Expiry date (optional)</label><input type="date" [(ngModel)]="plan.expires_on"></div>
-        <div style="flex:0 0 auto"><label>Payment</label><select [(ngModel)]="plan.paid"><option value="cash">Paid · Cash</option><option value="upi">Paid · UPI</option><option value="card">Paid · Card</option><option value="bank_transfer">Paid · Bank transfer</option><option value="other">Paid · Other</option><option value="pending">Pending (pay later)</option></select></div>
-      </div>
-      <label>Plan notes</label><input [(ngModel)]="plan.notes" placeholder="Optional package details">
-      <small>Hours and rupees are separate balances. The selected balance type is what staff can redeem later.</small>
-    }
     
     <h2 style="margin-top:16px">First appointment (optional)</h2>
+    <label style="display:flex;gap:8px;align-items:center;margin:6px 0 10px"><input type="checkbox" [(ngModel)]="bookNow" (ngModelChange)="!$event && (therapist_id = undefined)"> Book an appointment now</label>
+    @if (bookNow) {
     <div class="grid">
-      <div><label>Therapist (blank = no appointment now)</label><app-search-select [options]="tOpts()" [(value)]="therapist_id" placeholder="Search therapist…" /></div>
+      <div><label>Therapist *</label><app-search-select [options]="tOpts()" [(value)]="therapist_id" placeholder="Search therapist…" /></div>
       <div><label>Service</label><select [(ngModel)]="service_id">
         <option [ngValue]="undefined">Choose a service</option>
         @for (s of services(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select></div>
@@ -68,11 +50,12 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
     </div>
     @if (therapist_id) {
     <app-when-picker [(value)]="start_at" [therapistId]="therapist_id" [durationMin]="duration()" />
-    } @else { <small>Pick a therapist to book a first appointment, or just register the customer.</small><br> }
+    } @else { <small>Pick the therapist, service and a free time.</small><br> }
+    }
 
     <button class="p" [disabled]="saving()" (click)="save()">{{ saving() ? 'Registering...' : 'Register customer' }}</button>
     @if (msg()) { <div class="msg" [class.err]="isErr()">{{ msg() }}</div> }
-    <small>To add a plan to an existing customer, open Customers, select History, and use Add plan / package.</small>
+    <small>Existing customer? Find them under Customers to book, assign a membership or edit details.</small>
   </div>`,
 })
 export class Onboarding implements OnInit {
@@ -91,6 +74,7 @@ export class Onboarding implements OnInit {
     { name: '', plan_type: 'hours', amount: null, price_paid: null, paid: 'cash', expires_on: '', notes: '' };
 
   packages = signal<PlanPackage[]>([]);
+  bookNow = false;
   pkgChoice: number | 'custom' | null = null; pkgPaid = 'cash';
   pkgLabel(k: PlanPackage) {
     const gives = k.plan_type === 'hours' ? `${+k.amount} hrs` : `₹${(+k.amount).toLocaleString('en-IN')} wallet`;
@@ -109,7 +93,7 @@ export class Onboarding implements OnInit {
     this.c = blank();
     this.start_at = '';
     this.duration_min = null;
-    this.therapist_id = undefined;
+    this.therapist_id = undefined; this.bookNow = false;
     this.service_id = undefined;
     this.includePlan = false; this.pkgChoice = null; this.pkgPaid = 'cash';
     this.preferredPaymentMethod = '';
@@ -140,9 +124,9 @@ export class Onboarding implements OnInit {
       price_paid: this.plan.price_paid === null || String(this.plan.price_paid) === '' ? null : Number(this.plan.price_paid),
       ...this.payOf(this.plan.paid),
     };
-    if (this.therapist_id || this.service_id || this.start_at) {
+    if (this.bookNow && (this.therapist_id || this.service_id || this.start_at)) {
       if (!this.therapist_id || !this.service_id || !this.start_at) {
-        this.msg.set('For a first appointment pick a therapist, a service, a date and a time - or leave them all empty.');
+        this.msg.set('For a first appointment pick a therapist, a service, a date and a time, or untick "Book an appointment now".');
         this.isErr.set(true);
         return;
       }

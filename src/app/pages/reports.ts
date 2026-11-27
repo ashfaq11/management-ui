@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Insights } from './insights';
 import { Api, errorText } from '../core/api';
 import { Customer, IncentiveReport, Service, Summary, Therapist } from '../core/models';
 import { thisMonth, today } from '../core/util';
@@ -39,8 +40,10 @@ interface ShiftReport {
 }
 
 @Component({
-  selector: 'app-reports', imports: [FormsModule, DecimalPipe],
+  selector: 'app-reports', imports: [FormsModule, DecimalPipe, Insights],
   template: `
+  <nav class="tabs"><button [class.on]="tab === 'revenue'" (click)="tab = 'revenue'">Revenue & profit</button><button [class.on]="tab === 'therapists'" (click)="tab = 'therapists'">Therapists</button><button [class.on]="tab === 'plans'" (click)="tab = 'plans'">Plans</button><button [class.on]="tab === 'services'" (click)="tab = 'services'">Services</button><button [class.on]="tab === 'customers'" (click)="tab = 'customers'">Customers</button><button [class.on]="tab === 'payments'" (click)="tab = 'payments'">Payments</button><button [class.on]="tab === 'expenses'" (click)="tab = 'expenses'">Expenses</button><button [class.on]="tab === 'lapsed'" (click)="tab = 'lapsed'">Not seen lately</button><button [class.on]="tab === 'busy'" (click)="tab = 'busy'">Busy hours</button><button [class.on]="tab === 'utilisation'" (click)="tab = 'utilisation'">Utilisation</button><button [class.on]="tab === 'cancellations'" (click)="tab = 'cancellations'">Cancellations</button><button [class.on]="tab === 'expiring'" (click)="tab = 'expiring'">Expiring plans</button><button [class.on]="tab === 'dues'" (click)="tab = 'dues'">Pending dues</button></nav>
+  @if (tab !== 'revenue') { <app-insights [kind]="tab" /> } @else {
   <div class="card"><div class="row">
     <div><label>Period</label>
       <select [ngModel]="mode" (ngModelChange)="mode = $event; load()">
@@ -261,9 +264,11 @@ interface ShiftReport {
     @if (therapistId == null) {
       <tr><th colspan="5">Total incentive (incl. extra)</th><th class="num">{{ i.total_incentive | number: '1.2-2' }}</th></tr>
     }</table></div>
-  }</div>`,
+  }</div>
+  }`,
 })
 export class Reports implements OnInit {
+  tab = 'revenue';
   private api = inject(Api);
   mode: 'month' | 'range' = 'month'; from = thisMonth() + '-01'; to = today();
   month = thisMonth(); therapistId: number | null = null;

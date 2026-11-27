@@ -138,3 +138,9 @@ button.p,button.s{white-space:nowrap}
 .breakup em{font-style:normal;color:var(--mut);font-weight:500;margin-right:3px}
 .breakup .tot{background:var(--acc-soft);border-color:transparent;color:var(--acc)}
 .breakup .mute{opacity:.75}
+
+.tabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 14px;padding-bottom:4px;scrollbar-width:thin}
+.tabs button{white-space:nowrap;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:7px 13px;
+  font-size:13px;cursor:pointer;min-height:auto}
+.tabs button:hover{border-color:var(--acc)}
+.tabs button.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}

@@ -167,3 +167,9 @@ body.busy button{pointer-events:none;opacity:.6;cursor:progress}
 body.busy::before{content:'';position:fixed;z-index:9999;top:0;left:0;height:3px;width:40%;background:var(--acc,#2a7);animation:busybar 1s linear infinite}
 @keyframes busybar{from{left:-40%}to{left:100%}}
 .rlevel{margin:10px 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+.rtabs{display:flex;gap:2px;border-bottom:2px solid var(--line,#dde3ea);margin:4px 0 10px;overflow-x:auto}
+.rtabs button{background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:10px 14px;font-weight:650;color:var(--mut);border-radius:0;white-space:nowrap}
+.rtabs button.on{color:var(--acc);border-bottom-color:var(--acc)}
+.rsub{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.rsub button{background:var(--bg);border:1px solid var(--line,#dde3ea);color:var(--ink);border-radius:999px;padding:6px 14px;font-size:13px}
+.rsub button.on{background:var(--acc);border-color:var(--acc);color:#fff}

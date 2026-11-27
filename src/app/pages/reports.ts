@@ -44,9 +44,10 @@ interface ShiftReport {
 @Component({
   selector: 'app-reports', imports: [DurationPipe, FormsModule, DecimalPipe, Insights, ClosingSummary],
   template: `
-  <div class="rgroups"><p class="rlevel">High level</p><details open><summary>Overview</summary><div><button [class.on]="tab === 'revenue'" (click)="tab = 'revenue'">Simple revenue</button><button [class.on]="tab === 'daily'" (click)="tab = 'daily'">Daily closing</button><button [class.on]="tab === 'monthly'" (click)="tab = 'monthly'">Monthly closing</button></div></details><p class="rlevel">Detailed</p><details [open]="inGroup(['payments', 'busy'])"><summary>Money</summary><div><button [class.on]="tab === 'payments'" (click)="tab = 'payments'">Payments</button><button [class.on]="tab === 'busy'" (click)="tab = 'busy'">Busy hours</button></div></details><details [open]="inGroup(['therapists', 'utilisation'])"><summary>Therapists</summary><div><button [class.on]="tab === 'therapists'" (click)="tab = 'therapists'">Performance</button><button [class.on]="tab === 'utilisation'" (click)="tab = 'utilisation'">Utilisation</button></div></details><details [open]="inGroup(['expenses'])"><summary>Expenses</summary><div><button [class.on]="tab === 'expenses'" (click)="tab = 'expenses'">Expenses by type</button></div></details><details [open]="inGroup(['customers', 'lapsed', 'cancellations', 'dues'])"><summary>Customers</summary><div><button [class.on]="tab === 'customers'" (click)="tab = 'customers'">Top customers</button><button [class.on]="tab === 'lapsed'" (click)="tab = 'lapsed'">Not seen lately</button><button [class.on]="tab === 'cancellations'" (click)="tab = 'cancellations'">Cancellations</button><button [class.on]="tab === 'dues'" (click)="tab = 'dues'">Pending dues</button></div></details><details [open]="inGroup(['plans', 'expiring'])"><summary>Memberships</summary><div><button [class.on]="tab === 'plans'" (click)="tab = 'plans'">All memberships</button><button [class.on]="tab === 'expiring'" (click)="tab = 'expiring'">Expiring soon</button></div></details></div>
+  <nav class="rtabs">@for (g of groups; track g.name) { <button [class.on]="group().name === g.name" (click)="tab = g.tabs[0][0]">{{ g.name }}</button> }</nav>
+  <nav class="rsub">@for (t of group().tabs; track t[0]) { <button [class.on]="tab === t[0]" (click)="tab = t[0]">{{ t[1] }}</button> }</nav>
   @if (tab === 'daily' || tab === 'monthly') { <app-closing [mode]="tab" /> }
-  @else if (tab !== 'revenue') { <app-insights [kind]="tab" /> } @else {
+  @else if (!isLocal()) { <app-insights [kind]="tab" /> } @else {
   <div class="card"><div class="row">
     <div><label>Period</label>
       <select [ngModel]="mode" (ngModelChange)="mode = $event; load()">
@@ -89,7 +90,7 @@ interface ShiftReport {
     @if (filtered()) { <button class="s" style="margin-top:14px" (click)="clear()">Clear filters</button> }
   </div>
   @if (err()) { <div class="msg err">{{ err() }}</div> }
-  @if (sum(); as s) {
+  @if (tab === 'revenue' && sum(); as s) {
     <div class="figs">
       <div class="fig teal"><i class="ic">&#8377;</i><span>Service revenue</span><b>{{ inr(s.revenue) }}</b>
         <small>completed services</small></div>
@@ -187,7 +188,7 @@ interface ShiftReport {
     }
     </table></div></div></details>
   }
-  @if (planReport(); as p) {
+  @if (tab === 'musage' && planReport(); as p) {
     <h2 style="margin-top:22px">Membership reporting</h2>
     <p style="color:var(--mut)">Plan sales are for the selected period. Available balances show current, non-expired customer wallets.</p>
     <div class="grid">
@@ -228,7 +229,7 @@ interface ShiftReport {
   }
 
   @if (shiftErr()) { <div class="msg">{{ shiftErr() }}</div> }
-  @if (shiftReport(); as sh) {
+  @if (tab === 'shifts' && shiftReport(); as sh) {
     <h2 style="margin-top:24px">Therapist shift reporting</h2>
     <p style="color:var(--mut)">Weekly roster and service activity for {{ sh.from }} to {{ sh.to }}. Shift hours are configured under Therapists &amp; services.</p>
     <div class="grid">
@@ -260,7 +261,7 @@ interface ShiftReport {
     </table></div>
   }
 
-  @if (mode === 'month' && inc(); as i) {
+  @if (tab === 'incentives' && mode === 'month' && inc(); as i) {
     <h2 style="margin-top:16px">Therapist incentives</h2>
     <div class="wrap"><table><tr><th>Therapist</th><th class="num">Services</th><th class="num">Revenue</th><th class="num">%</th><th class="num">Incentive</th><th class="num">Extra</th></tr>
     @for (x of incRows(i); track x.therapist_id) {
@@ -275,6 +276,16 @@ interface ShiftReport {
 })
 export class Reports implements OnInit {
   tab = 'revenue';
+  groups: { name: string; tabs: [string, string][] }[] = [
+    { name: 'Overview', tabs: [['revenue', 'Summary'], ['daily', 'Daily closing'], ['monthly', 'Monthly closing']] },
+    { name: 'Sales', tabs: [['payments', 'Payments'], ['dues', 'Pending dues'], ['busy', 'Busy hours']] },
+    { name: 'Staff', tabs: [['therapists', 'Performance'], ['utilisation', 'Utilisation'], ['shifts', 'Shifts'], ['incentives', 'Incentives']] },
+    { name: 'Clients', tabs: [['customers', 'Top customers'], ['lapsed', 'Not seen lately'], ['cancellations', 'Cancellations']] },
+    { name: 'Memberships', tabs: [['plans', 'All memberships'], ['musage', 'Sold & used'], ['expiring', 'Expiring soon']] },
+    { name: 'Expenses', tabs: [['expenses', 'By type']] },
+  ];
+  isLocal() { return ['revenue', 'musage', 'shifts', 'incentives'].includes(this.tab); }
+  group() { return this.groups.find((g) => g.tabs.some((t) => t[0] === this.tab)) ?? this.groups[0]; }
   private api = inject(Api);
   mode: 'month' | 'range' = 'month'; from = thisMonth() + '-01'; to = today();
   month = thisMonth(); therapistId: number | null = null;

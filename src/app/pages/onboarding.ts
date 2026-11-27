@@ -1,5 +1,6 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, computed, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SearchSelect, therapistOptions } from '../shared/search-select';
 import { Api, errorText } from '../core/api';
 import { Auth } from '../core/auth';
 import { WhenPicker } from '../shared/when-picker';
@@ -8,7 +9,7 @@ import { PaymentMethod, Service, Therapist, PlanPackage } from '../core/models';
 const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', address: '', notes: '' });
 
 @Component({
-  selector: 'app-onboarding', imports: [FormsModule, WhenPicker],
+  selector: 'app-onboarding', imports: [SearchSelect, FormsModule, WhenPicker],
   template: `
   <div class="card"><h2>Onboard new customer</h2>
     <div class="grid">
@@ -57,9 +58,7 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
     
     <h2 style="margin-top:16px">First appointment (optional)</h2>
     <div class="grid">
-      <div><label>Therapist</label><select [(ngModel)]="therapist_id">
-        <option [ngValue]="undefined">No appointment now</option>
-        @for (t of therapists(); track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }</select></div>
+      <div><label>Therapist (blank = no appointment now)</label><app-search-select [options]="tOpts()" [(value)]="therapist_id" placeholder="Search therapist…" /></div>
       <div><label>Service</label><select [(ngModel)]="service_id">
         <option [ngValue]="undefined">Choose a service</option>
         @for (s of services(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select></div>
@@ -77,6 +76,7 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
   </div>`,
 })
 export class Onboarding implements OnInit {
+  tOpts = computed(() => therapistOptions(this.therapists()));
   /** One select = paid or not + how: 'cash' | 'upi' | ... | 'pending'. */
   payOf(v: unknown) { const m = String(v); return { paid: m !== 'pending', payment_method: m === 'pending' ? null : m }; }
 

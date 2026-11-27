@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, OnInit, inject, input, signal } from '@angular/core';
+import { Component, computed, OnInit, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SearchSelect, therapistOptions } from '../shared/search-select';
 import { Api, errorText } from '../core/api';
 import { Therapist } from '../core/models';
 import { thisMonth, today } from '../core/util';
@@ -9,13 +10,12 @@ interface Bonus { id: number; therapist_id: number; therapist: string; on_date: 
 
 /** Extra incentives (bonus, extra hours, ...) for a therapist on a date; they are added to that month's payslip. */
 @Component({
-  selector: 'app-bonuses', imports: [FormsModule, DecimalPipe],
+  selector: 'app-bonuses', imports: [SearchSelect, FormsModule, DecimalPipe],
   template: `
   <div class="card"><h2>Extra incentives</h2>
     <p style="margin:0 0 4px;color:var(--mut);font-size:13px">Paid on top of the % incentive, on the payslip of the month of the date.</p>
     <div class="grid">
-      <div><label>Therapist</label><select [(ngModel)]="f.therapist_id">
-        @for (t of therapists(); track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }</select></div>
+      <div><label>Therapist</label><app-search-select [options]="tOpts()" [(value)]="f.therapist_id" placeholder="Search therapist…" /></div>
       <div><label>Date</label><input type="date" [(ngModel)]="f.on_date"></div>
       <div><label>Amount (Rs)</label><input type="number" min="1" [(ngModel)]="f.amount"></div>
       <div><label>Note</label><input [(ngModel)]="f.note" maxlength="200" placeholder="e.g. Festival bonus, extra hours"></div>
@@ -38,6 +38,7 @@ interface Bonus { id: number; therapist_id: number; therapist: string; on_date: 
   </div>`,
 })
 export class Bonuses implements OnInit {
+  tOpts = computed(() => therapistOptions(this.therapists()));
   private api = inject(Api);
   therapists = input<Therapist[]>([]);
   month = thisMonth(); rows = signal<Bonus[]>([]);

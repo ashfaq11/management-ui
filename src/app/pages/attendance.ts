@@ -1,5 +1,6 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, computed, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SearchSelect, therapistOptions } from '../shared/search-select';
 import { Api, errorText } from '../core/api';
 import { today } from '../core/util';
 
@@ -8,13 +9,12 @@ interface Att { therapist_id: number; therapist: string; scheduled: number; away
 const KINDS: Record<string, string> = { leave: 'Leave', sick: 'Sick', absent: 'Absent (no notice)', holiday: 'Holiday' };
 
 @Component({
-  selector: 'app-attendance', imports: [FormsModule],
+  selector: 'app-attendance', imports: [SearchSelect, FormsModule],
   template: `
   <div class="page-head"><div><h1>Attendance</h1><p>Mark only the days a therapist is away. Days present = shift days minus absences.</p></div></div>
   <div class="card pop"><h2>Mark absence</h2>
     <div class="row">
-      <div style="flex:2"><label>Therapist *</label><select [(ngModel)]="f.therapist_id"><option [ngValue]="null">Choose…</option>
-        @for (t of team(); track t.therapist_id) { <option [ngValue]="t.therapist_id">{{ t.therapist }}</option> }</select></div>
+      <div style="flex:2"><label>Therapist *</label><app-search-select [options]="tOpts()" [(value)]="f.therapist_id" placeholder="Search therapist…" /></div>
       <div style="flex:0 0 160px"><label>From *</label><input type="date" [(ngModel)]="f.on_date"></div>
       <div style="flex:0 0 160px"><label>To (optional)</label><input type="date" [(ngModel)]="f.to_date"></div>
       <div style="flex:0 0 180px"><label>Type</label><select [(ngModel)]="f.kind">@for (k of kinds; track k[0]) { <option [value]="k[0]">{{ k[1] }}</option> }</select></div>
@@ -45,6 +45,7 @@ const KINDS: Record<string, string> = { leave: 'Leave', sick: 'Sick', absent: 'A
   </div>`,
 })
 export class Attendance implements OnInit {
+  tOpts = computed(() => this.team().map((t) => ({ id: t.therapist_id, label: t.therapist })));
   private api = inject(Api);
   kinds = Object.entries(KINDS);
   month = today().slice(0, 7);

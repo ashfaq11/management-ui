@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SearchSelect, therapistOptions } from '../shared/search-select';
 import { ActivatedRoute } from '@angular/router';
 import { Api, errorText } from '../core/api';
 import { Service, Shift, ShiftAssignment, Therapist } from '../core/models';
@@ -17,7 +18,7 @@ const mask = (v?: string) => (v ? (v.length > 4 ? '•••• ' + v.slice(-4) 
 const blankS = () => ({ name: '', price: 0, duration_min: 60 });
 
 @Component({
-  selector: 'app-staff', imports: [FormsModule, DecimalPipe, Bonuses],
+  selector: 'app-staff', imports: [SearchSelect, FormsModule, DecimalPipe, Bonuses],
   styles: [`
     .shift-intro{color:var(--mut);margin:-4px 0 16px;max-width:720px;line-height:1.5}
     .shift-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end}
@@ -113,10 +114,7 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
     <h3 style="margin-top:22px">Weekly therapist roster</h3>
     <p class="shift-subtle">Assign one shift per therapist per day. Updating an existing weekday replaces that day's assignment.</p>
     <div class="shift-form">
-      <div><label>Therapist</label><select [(ngModel)]="assignmentForm.therapist_id">
-        <option [ngValue]="null">Choose therapist</option>
-        @for (x of therapists(); track x.id) { @if (x.is_active) { <option [ngValue]="x.id">{{ x.name }}</option> } }
-      </select></div>
+      <div><label>Therapist</label><app-search-select [options]="tOpts()" [(value)]="assignmentForm.therapist_id" placeholder="Search therapist…" /></div>
       <div><label>Shift</label><select [(ngModel)]="assignmentForm.shift_id">
         <option [ngValue]="null">Choose shift</option>
         @for (x of shifts(); track x.id) { @if (x.is_active) { <option [ngValue]="x.id">{{ x.name }} ({{ x.start_time.slice(0,5) }}–{{ x.end_time.slice(0,5) }})</option> } }
@@ -164,6 +162,7 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
   @if (!svc) { <app-bonuses [therapists]="therapists()" /> }`,
 })
 export class Staff implements OnInit {
+  tOpts = computed(() => therapistOptions(this.therapists()));
   private api = inject(Api);
   /** /services shows only the services card; /staff the therapists side. */
   svc = inject(ActivatedRoute).snapshot.data['section'] === 'services';

@@ -1,13 +1,14 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, computed, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SearchSelect, therapistOptions } from '../shared/search-select';
 import { Api, errorText } from '../core/api';
 import { Appointment, Customer, CustomerPlan, PaymentMethod, STATUSES, Service, Status, Therapist } from '../core/models';
 import { WhenPicker } from '../shared/when-picker';
 import { today } from '../core/util';
 
 @Component({
-  selector: 'app-appointments', imports: [FormsModule, DecimalPipe, WhenPicker],
+  selector: 'app-appointments', imports: [SearchSelect, FormsModule, DecimalPipe, WhenPicker],
   styles: [`
     .cal-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
     .cal-toolbar .spacer{flex:1}
@@ -41,8 +42,7 @@ import { today } from '../core/util';
         </select>
         <small>{{ customerSearch.trim() ? filteredCustomers().length + ' matching customers' : 'Showing first 5 customers. Search to find others.' }}</small>
       </div>
-      <div><label>Therapist</label><select [(ngModel)]="f.therapist_id">
-        @for (t of therapists(); track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }</select></div>
+      <div><label>Therapist</label><app-search-select [options]="tOpts()" [(value)]="f.therapist_id" placeholder="Search therapist…" /></div>
       <div><label>Service</label><select [(ngModel)]="f.service_id">
         @for (s of services(); track s.id) { <option [ngValue]="s.id">{{ s.name }} (Rs {{ s.price }})</option> }</select></div>
       <div><label>{{ editId() ? "Price (blank = keep, or list price if service changed)" : "Price override (optional)" }}</label><input type="number" min="0" [(ngModel)]="f.price"></div>
@@ -192,6 +192,7 @@ import { today } from '../core/util';
   </div>`,
 })
 export class Appointments implements OnInit {
+  tOpts = computed(() => therapistOptions(this.therapists()));
   private api = inject(Api);
   statuses = STATUSES;
   customers = signal<Customer[]>([]); customerSearch = ''; private customerSearchSequence = 0;
@@ -216,7 +217,7 @@ export class Appointments implements OnInit {
       this.api.get<Therapist[]>('/therapists'), this.api.get<Service[]>('/services')]);
     this.customers.set(c);
     this.therapists.set(t.filter((x) => x.is_active)); this.services.set(s.filter((x) => x.is_active));
-    this.f.customer_id = c[0]?.id; this.f.therapist_id = this.therapists()[0]?.id; this.f.service_id = this.services()[0]?.id;
+    this.f.customer_id = c[0]?.id; this.f.service_id = this.services()[0]?.id;
     await this.load();
   }
 

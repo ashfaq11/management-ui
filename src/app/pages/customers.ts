@@ -77,10 +77,10 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
             <td>{{ planStatus(p) }}</td>
             <td>@if (p.paid_at) { <span class="badge" style="background:var(--ok-soft);color:var(--ok)">Paid</span> }
               @else { <span class="badge" style="background:var(--gold-soft);color:var(--gold)">Pending{{ p.price_paid ? ' · ₹' + (+p.price_paid).toLocaleString('en-IN') : '' }}</span>
-                @if (auth.isAdmin()) { <button class="s" style="margin-left:6px" (click)="markPaid(c.id, p.id)">Mark paid</button> } }
+                @if (true) { <select style="width:auto;min-height:30px;padding:2px 26px 2px 8px;margin-left:6px" [(ngModel)]="markVia"><option value="cash">Cash</option><option value="upi">UPI</option><option value="card">Card</option><option value="bank_transfer">Bank</option><option value="other">Other</option></select><button class="s" style="margin-left:6px" (click)="markPaid(c.id, p.id)">Mark paid</button> } }
               @for (x of p.pending_topups ?? []; track x.id) {
                 <div style="margin-top:4px"><span class="badge" style="background:var(--gold-soft);color:var(--gold)">Top-up pending{{ x.price_paid ? ' · ₹' + (+x.price_paid).toLocaleString('en-IN') : '' }}</span>
-                @if (auth.isAdmin()) { <button class="s" style="margin-left:6px" (click)="markTopupPaid(c.id, x.id)">Mark paid</button> }</div> }</td>
+                @if (true) { <select style="width:auto;min-height:30px;padding:2px 26px 2px 8px;margin-left:6px" [(ngModel)]="markVia"><option value="cash">Cash</option><option value="upi">UPI</option><option value="card">Card</option><option value="bank_transfer">Bank</option><option value="other">Other</option></select><button class="s" style="margin-left:6px" (click)="markTopupPaid(c.id, x.id)">Mark paid</button> }</div> }</td>
             @if (auth.isAdmin()) { <td style="white-space:nowrap"><button class="s" (click)="startPlan(p, 'topup')">Top up</button>
               <button class="s" (click)="startPlan(p, 'edit')">Edit</button></td> }</tr>
           @if (planEdit?.id === p.id) {
@@ -91,7 +91,7 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
                     <input type="number" min="0.01" step="0.01" [(ngModel)]="planEdit!.amount"></div>
                   <div><label>Cost (Rs, optional)</label>
                     <input type="number" min="0" step="0.01" [(ngModel)]="planEdit!.price_paid" [placeholder]="p.plan_type === 'rupees' ? 'same as amount' : ''"></div>
-                  <div style="flex:0 0 auto"><label>Payment</label><select [(ngModel)]="planEdit!.paid"><option [ngValue]="true">Paid now</option><option [ngValue]="false">Pending</option></select></div>
+                  <div style="flex:0 0 auto"><label>Payment</label><select [(ngModel)]="planEdit!.paid"><option value="cash">Paid · Cash</option><option value="upi">Paid · UPI</option><option value="card">Paid · Card</option><option value="bank_transfer">Paid · Bank transfer</option><option value="other">Paid · Other</option><option value="pending">Pending (pay later)</option></select></div>
                   <div><label>Note (optional)</label><input [(ngModel)]="planEdit!.note" placeholder="e.g. paid by UPI"></div>
                 </div>
                 <small>New balance: {{ (+p.balance + +(planEdit!.amount || 0)) | number: '1.2-2' }}</small>
@@ -114,7 +114,7 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
           <div style="flex:2"><label>Plan package</label><select [(ngModel)]="assign.package_id">
             <option [ngValue]="null">Choose a package…</option>
             @for (k of packages(); track k.id) { @if (k.is_active) { <option [ngValue]="k.id">{{ pkgLabel(k) }}</option> } }</select></div>
-          <div style="flex:0 0 190px"><label>Payment</label><select [(ngModel)]="assign.paid"><option [ngValue]="true">Paid now</option><option [ngValue]="false">Pending (pay later)</option></select></div>
+          <div style="flex:0 0 190px"><label>Payment</label><select [(ngModel)]="assign.paid"><option value="cash">Paid · Cash</option><option value="upi">Paid · UPI</option><option value="card">Paid · Card</option><option value="bank_transfer">Paid · Bank transfer</option><option value="other">Paid · Other</option><option value="pending">Pending (pay later)</option></select></div>
           <div style="flex:0 0 auto"><button class="p" style="margin:0" (click)="assignPlan(c.id)" [disabled]="!assign.package_id">Assign plan</button></div>
         </div>
       } @else { <small>No plan packages yet. {{ auth.isAdmin() ? 'Add them in the Plans tab.' : 'Ask an admin to add them.' }}</small> }
@@ -130,7 +130,7 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
         <div><label>Plan cost (Rs, optional)</label>
           <input type="number" min="0" step="0.01" [(ngModel)]="planForm.price_paid" [placeholder]="planForm.plan_type === 'rupees' ? 'same as amount' : 'e.g. 9000 for 10 hrs'"></div>
         <div><label>Expiry date (optional)</label><input type="date" [(ngModel)]="planForm.expires_on"></div>
-        <div style="flex:0 0 auto"><label>Payment</label><select [(ngModel)]="planForm.paid"><option [ngValue]="true">Paid now</option><option [ngValue]="false">Pending (pay later)</option></select></div>
+        <div style="flex:0 0 auto"><label>Payment</label><select [(ngModel)]="planForm.paid"><option value="cash">Paid · Cash</option><option value="upi">Paid · UPI</option><option value="card">Paid · Card</option><option value="bank_transfer">Paid · Bank transfer</option><option value="other">Paid · Other</option><option value="pending">Pending (pay later)</option></select></div>
       </div>
       <label>Plan notes</label><input [(ngModel)]="planForm.notes" placeholder="Optional package details">
       <button class="p" style="margin-top:8px" (click)="addPlan(c.id)">Add custom plan</button>
@@ -179,34 +179,38 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
   }`,
 })
 export class Customers implements OnInit {
+  /** One select = paid or not + how: 'cash' | 'upi' | ... | 'pending'. */
+  markVia = 'cash';
+  payOf(v: unknown) { const m = String(v); return { paid: m !== 'pending', payment_method: m === 'pending' ? null : m }; }
+
   private api = inject(Api);
   auth = inject(Auth);
   form: Edit | null = null; formErr = signal('');
-  planForm = { name: '', plan_type: 'hours' as 'hours' | 'rupees', amount: 0, price_paid: null as number | null, paid: true, expires_on: '', notes: '' };
+  planForm = { name: '', plan_type: 'hours' as 'hours' | 'rupees', amount: 0, price_paid: null as number | null, paid: 'cash', expires_on: '', notes: '' };
   planMsg = signal(''); planErr = signal(false);
   packages = signal<PlanPackage[]>([]);
-  assign = { package_id: null as number | null, paid: true };
+  assign = { package_id: null as number | null, paid: 'cash' };
   pkgLabel(k: PlanPackage) {
     const gives = k.plan_type === 'hours' ? `${+k.amount} hrs` : `₹${(+k.amount).toLocaleString('en-IN')} wallet`;
     return `${k.name} · ${gives} · ₹${(+k.price).toLocaleString('en-IN')}${k.validity_days ? ' · ' + k.validity_days + ' days' : ''}`;
   }
   async assignPlan(cid: number) {
     try {
-      await this.api.post(`/customers/${cid}/plans/assign`, { package_id: this.assign.package_id, paid: this.assign.paid });
-      this.planErr.set(false); this.planMsg.set('Plan assigned.'); this.assign = { package_id: null, paid: true }; await this.open(cid);
+      await this.api.post(`/customers/${cid}/plans/assign`, { package_id: this.assign.package_id, ...this.payOf(this.assign.paid) });
+      this.planErr.set(false); this.planMsg.set('Plan assigned.'); this.assign = { package_id: null, paid: 'cash' }; await this.open(cid);
     } catch (x) { this.planErr.set(true); this.planMsg.set(errorText(x)); }
   }
-  planEdit: { id: number; mode: 'edit' | 'topup'; plan_type: 'hours' | 'rupees'; name: string; expires_on: string; notes: string; amount: number | null; price_paid: number | null; paid: boolean; note: string } | null = null;
+  planEdit: { id: number; mode: 'edit' | 'topup'; plan_type: 'hours' | 'rupees'; name: string; expires_on: string; notes: string; amount: number | null; price_paid: number | null; paid: string; note: string } | null = null;
   startPlan(p: { id: number; name: string; plan_type: 'hours' | 'rupees'; expires_on?: string | null; notes?: string | null }, mode: 'edit' | 'topup') {
     this.planMsg.set('');
-    this.planEdit = { id: p.id, mode, plan_type: p.plan_type, name: p.name, expires_on: p.expires_on ?? '', notes: p.notes ?? '', amount: null, price_paid: null, paid: true, note: '' };
+    this.planEdit = { id: p.id, mode, plan_type: p.plan_type, name: p.name, expires_on: p.expires_on ?? '', notes: p.notes ?? '', amount: null, price_paid: null, paid: 'cash', note: '' };
   }
   async markPaid(cid: number, pid: number) {
-    try { await this.api.put(`/customers/${cid}/plans/${pid}/paid`, { paid: true }); this.planErr.set(false); this.planMsg.set('Plan marked paid.'); await this.open(cid); }
+    try { await this.api.put(`/customers/${cid}/plans/${pid}/paid`, { paid: 'cash' }); this.planErr.set(false); this.planMsg.set('Plan marked paid.'); await this.open(cid); }
     catch (x) { this.planErr.set(true); this.planMsg.set(errorText(x)); }
   }
   async markTopupPaid(cid: number, tid: number) {
-    try { await this.api.put(`/plan-topups/${tid}/paid`, { paid: true }); this.planErr.set(false); this.planMsg.set('Top-up marked paid.'); await this.open(cid); }
+    try { await this.api.put(`/plan-topups/${tid}/paid`, { paid: 'cash' }); this.planErr.set(false); this.planMsg.set('Top-up marked paid.'); await this.open(cid); }
     catch (x) { this.planErr.set(true); this.planMsg.set(errorText(x)); }
   }
   async savePlan(cid: number) {
@@ -215,7 +219,7 @@ export class Customers implements OnInit {
       if (e.mode === 'topup') {
         if (!(Number(e.amount) > 0)) { this.planErr.set(true); this.planMsg.set('Enter an amount greater than zero.'); return; }
         await this.api.post(`/customers/${cid}/plans/${e.id}/topup`, { amount: Number(e.amount), note: e.note.trim() || null,
-          price_paid: e.price_paid === null || String(e.price_paid) === '' ? null : Number(e.price_paid), paid: e.paid });
+          price_paid: e.price_paid === null || String(e.price_paid) === '' ? null : Number(e.price_paid), ...this.payOf(e.paid) });
         this.planMsg.set('Top-up added.');
       } else {
         await this.api.put(`/customers/${cid}/plans/${e.id}`, { name: e.name.trim(), expires_on: e.expires_on || null, notes: e.notes.trim() || null });
@@ -300,10 +304,10 @@ export class Customers implements OnInit {
       await this.api.post('/customers/' + id + '/plans', {
         name: p.name.trim(), plan_type: p.plan_type, amount: Number(p.amount),
         expires_on: p.expires_on || null, notes: p.notes.trim() || null,
-        price_paid: p.price_paid === null || String(p.price_paid) === '' ? null : Number(p.price_paid), paid: p.paid,
+        price_paid: p.price_paid === null || String(p.price_paid) === '' ? null : Number(p.price_paid), ...this.payOf(p.paid),
       });
       this.planErr.set(false); this.planMsg.set('Plan added.');
-      this.planForm = { name: '', plan_type: 'hours', amount: 0, price_paid: null, paid: true, expires_on: '', notes: '' };
+      this.planForm = { name: '', plan_type: 'hours', amount: 0, price_paid: null, paid: 'cash', expires_on: '', notes: '' };
       await this.open(id);
     } catch (e) { this.planErr.set(true); this.planMsg.set(errorText(e)); }
   }

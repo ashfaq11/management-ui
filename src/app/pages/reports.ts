@@ -113,6 +113,16 @@ interface ShiftReport {
         } @else { <p class="hint" style="margin:10px 0 0">Pick a whole month without filters to see payroll and net profit.</p> }
       </div>
     }
+    @if (s.by_method?.length) {
+      <h3>Money by payment source</h3>
+      <div class="wrap"><table><tr><th>Source</th><th class="num">Services</th><th class="num">Plan sales</th><th class="num">Expenses</th><th class="num">Net</th></tr>
+        @for (m of s.by_method; track m.method) {
+          <tr><td><b>{{ methodLabel(m.method) }}</b></td><td class="num">{{ inr(m.services) }}</td><td class="num">{{ inr(m.plans) }}</td>
+            <td class="num">{{ m.expenses ? inr(-m.expenses) : '—' }}</td><td class="num"><b>{{ inr(m.net) }}</b></td></tr>
+        }
+        @if (s.paid_by_plan) { <tr><td>Prepaid plan (no new money)</td><td class="num">{{ inr(s.paid_by_plan) }}</td><td></td><td></td><td class="num">—</td></tr> }
+      </table></div>
+    }
     @if (s.plan_lines?.length) {
       <h3>Plan sales ({{ s.plan_lines!.length }})</h3>
       <div class="wrap"><table><tr><th>Date</th><th>Customer</th><th>Plan</th><th>Kind</th><th class="num">Amount</th><th class="num">Paid</th></tr>
@@ -320,4 +330,5 @@ export class Reports implements OnInit {
     return (n < 0 ? '\u2212' : '') + '\u20B9' + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: n % 1 ? 2 : 0 });
   }
   pct(part: number, whole: number) { return whole > 0 ? Math.max(0, Math.min(100, (part / whole) * 100)) : 0; }
+  methodLabel(m: string) { return ({ cash: 'Cash', upi: 'UPI', card: 'Card', bank_transfer: 'Bank transfer', other: 'Other' } as Record<string, string>)[m] ?? m; }
 }

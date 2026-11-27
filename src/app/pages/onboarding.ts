@@ -31,7 +31,7 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
         @for (k of packages(); track k.id) { @if (k.is_active) { <option [ngValue]="k.id">{{ pkgLabel(k) }}</option> } }
         @if (auth.isAdmin()) { <option value="custom">Custom plan (admin)…</option> }</select></div>
       @if (pkgChoice !== null && pkgChoice !== 'custom') {
-        <div style="flex:0 0 190px"><label>Payment</label><select [(ngModel)]="pkgPaid"><option [ngValue]="true">Paid now</option><option [ngValue]="false">Pending (pay later)</option></select></div>
+        <div style="flex:0 0 190px"><label>Payment</label><select [(ngModel)]="pkgPaid"><option value="cash">Paid · Cash</option><option value="upi">Paid · UPI</option><option value="card">Paid · Card</option><option value="bank_transfer">Paid · Bank transfer</option><option value="other">Paid · Other</option><option value="pending">Pending (pay later)</option></select></div>
       }
     </div>
     @if (includePlan && auth.isAdmin()) {
@@ -49,7 +49,7 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
         <div><label>Plan cost (Rs, optional)</label>
           <input type="number" min="0" step="1" [(ngModel)]="plan.price_paid" [placeholder]="plan.plan_type === 'rupees' ? 'same as amount' : 'e.g. 9000 for 10 hrs'"></div>
         <div><label>Expiry date (optional)</label><input type="date" [(ngModel)]="plan.expires_on"></div>
-        <div style="flex:0 0 auto"><label>Payment</label><select [(ngModel)]="plan.paid"><option [ngValue]="true">Paid now</option><option [ngValue]="false">Pending (pay later)</option></select></div>
+        <div style="flex:0 0 auto"><label>Payment</label><select [(ngModel)]="plan.paid"><option value="cash">Paid · Cash</option><option value="upi">Paid · UPI</option><option value="card">Paid · Card</option><option value="bank_transfer">Paid · Bank transfer</option><option value="other">Paid · Other</option><option value="pending">Pending (pay later)</option></select></div>
       </div>
       <label>Plan notes</label><input [(ngModel)]="plan.notes" placeholder="Optional package details">
       <small>Hours and rupees are separate balances. The selected balance type is what staff can redeem later.</small>
@@ -77,6 +77,9 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
   </div>`,
 })
 export class Onboarding implements OnInit {
+  /** One select = paid or not + how: 'cash' | 'upi' | ... | 'pending'. */
+  payOf(v: unknown) { const m = String(v); return { paid: m !== 'pending', payment_method: m === 'pending' ? null : m }; }
+
   private api = inject(Api);
   auth = inject(Auth);
   therapists = signal<Therapist[]>([]); services = signal<Service[]>([]);
@@ -84,11 +87,11 @@ export class Onboarding implements OnInit {
   c = blank(); therapist_id?: number; service_id?: number; start_at = ''; duration_min: number | null = null;
   includePlan = false;
   preferredPaymentMethod: PaymentMethod | '' = '';
-  plan: { name: string; plan_type: 'hours' | 'rupees'; amount: number | null; price_paid: number | null; paid: boolean; expires_on: string; notes: string } =
-    { name: '', plan_type: 'hours', amount: null, price_paid: null, paid: true, expires_on: '', notes: '' };
+  plan: { name: string; plan_type: 'hours' | 'rupees'; amount: number | null; price_paid: number | null; paid: string; expires_on: string; notes: string } =
+    { name: '', plan_type: 'hours', amount: null, price_paid: null, paid: 'cash', expires_on: '', notes: '' };
 
   packages = signal<PlanPackage[]>([]);
-  pkgChoice: number | 'custom' | null = null; pkgPaid = true;
+  pkgChoice: number | 'custom' | null = null; pkgPaid = 'cash';
   pkgLabel(k: PlanPackage) {
     const gives = k.plan_type === 'hours' ? `${+k.amount} hrs` : `₹${(+k.amount).toLocaleString('en-IN')} wallet`;
     return `${k.name} · ${gives} · ₹${(+k.price).toLocaleString('en-IN')}${k.validity_days ? ' · ' + k.validity_days + ' days' : ''}`;
@@ -108,9 +111,9 @@ export class Onboarding implements OnInit {
     this.duration_min = null;
     this.therapist_id = undefined;
     this.service_id = undefined;
-    this.includePlan = false; this.pkgChoice = null; this.pkgPaid = true;
+    this.includePlan = false; this.pkgChoice = null; this.pkgPaid = 'cash';
     this.preferredPaymentMethod = '';
-    this.plan = { name: '', plan_type: 'hours', amount: null, price_paid: null, paid: true, expires_on: '', notes: '' };
+    this.plan = { name: '', plan_type: 'hours', amount: null, price_paid: null, paid: 'cash', expires_on: '', notes: '' };
   }
 
   async save() {
@@ -130,12 +133,12 @@ export class Onboarding implements OnInit {
     const body: Record<string, unknown> = { name: this.c.name.trim(), phone: this.c.phone.trim() };
     for (const k of ['email', 'gender', 'dob', 'address', 'notes'] as const) body[k] = this.c[k] || null;
     body['preferred_payment_method'] = this.preferredPaymentMethod || null;
-    if (this.pkgChoice !== null && this.pkgChoice !== 'custom') body['package'] = { package_id: this.pkgChoice, paid: this.pkgPaid };
+    if (this.pkgChoice !== null && this.pkgChoice !== 'custom') body['package'] = { package_id: this.pkgChoice, ...this.payOf(this.pkgPaid) };
     if (this.includePlan) body['plan'] = {
       name: this.plan.name.trim(), plan_type: this.plan.plan_type, amount: Number(this.plan.amount),
       expires_on: this.plan.expires_on || null, notes: this.plan.notes.trim() || null,
       price_paid: this.plan.price_paid === null || String(this.plan.price_paid) === '' ? null : Number(this.plan.price_paid),
-      paid: this.plan.paid,
+      ...this.payOf(this.plan.paid),
     };
     if (this.therapist_id || this.service_id || this.start_at) {
       if (!this.therapist_id || !this.service_id || !this.start_at) {

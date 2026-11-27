@@ -5,7 +5,7 @@ import { Api, errorText } from '../core/api';
 import { today } from '../core/util';
 
 const CATS = ['Maintenance', 'Rent', 'Electricity & water', 'Supplies', 'Laundry', 'Repairs', 'Marketing', 'Other'];
-interface Line { id: number; on_date: string; category: string; name: string | null; amount: number; kind: 'one-off' | 'regular'; }
+interface Line { id: number; on_date: string; category: string; name: string | null; amount: number; kind: 'one-off' | 'regular'; payment_method?: string | null; }
 interface Regular { id: number; name: string; category: string; amount: number; day_of_month: number; starts_on: string; ends_on: string | null; notes: string | null; }
 interface Month { total: number; lines: Line[]; by_category: { category: string; amount: number }[]; regular: Regular[]; }
 
@@ -20,6 +20,8 @@ interface Month { total: number; lines: Line[]; by_category: { category: string;
       <div style="flex:2"><label>Reason *</label><input [(ngModel)]="f.note" placeholder="e.g. AC service, towels, plumber" (keyup.enter)="add()"></div>
       <div style="flex:0 0 160px"><label>Date</label><input type="date" [(ngModel)]="f.on_date"></div>
       <div style="flex:0 0 180px"><label>Type</label><select [(ngModel)]="f.category">@for (c of cats; track c) {<option>{{ c }}</option>}</select></div>
+      <div style="flex:0 0 150px"><label>Paid by *</label><select [(ngModel)]="f.payment_method"><option value="cash">Cash</option><option value="upi">UPI</option>
+        <option value="card">Card</option><option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select></div>
     </div>
     <button class="p" (click)="add()" [disabled]="busy()">{{ editId() ? 'Save changes' : 'Add expense' }}</button>
     @if (editId()) { <button class="s" style="margin-left:8px" (click)="reset()">Cancel</button> }
@@ -38,7 +40,7 @@ interface Month { total: number; lines: Line[]; by_category: { category: string;
     <div class="wrap" style="margin-top:8px"><table><tr><th>Date</th><th>Reason</th><th>Type</th><th class="num">Amount</th><th></th></tr>
       @for (x of data()?.lines ?? []; track x.kind + x.id + x.on_date) {
         <tr><td>{{ x.on_date }}</td><td>{{ x.name || '—' }} @if (x.kind === 'regular') { <span class="badge gold">monthly</span> }</td>
-          <td>{{ x.category }}</td><td class="num">{{ x.amount | number: '1.2-2' }}</td>
+          <td>{{ x.category }}{{ x.payment_method ? ' · ' + ({cash:'Cash',upi:'UPI',card:'Card',bank_transfer:'Bank',other:'Other'}[x.payment_method] ?? x.payment_method) : '' }}</td><td class="num">{{ x.amount | number: '1.2-2' }}</td>
           <td style="white-space:nowrap">@if (x.kind === 'one-off') {
             <button class="s" (click)="edit(x)">Edit</button> <button class="s" (click)="remove(x)">Delete</button> }</td></tr>
       } @empty { <tr><td colspan="5">No expenses this month.</td></tr> }
@@ -75,7 +77,7 @@ export class Expenses implements OnInit {
   editId = signal<number | null>(null); rId = signal<number | null>(null);
   f = this.blank(); r = this.blankR(); private rEnds: string | null = null;
 
-  blank() { return { amount: null as number | null, note: '', on_date: today(), category: 'Maintenance' }; }
+  blank() { return { amount: null as number | null, note: '', on_date: today(), category: 'Maintenance', payment_method: 'cash' }; }
   blankR() { return { name: '', amount: null as number | null, category: 'Rent', day_of_month: 1, starts_on: today().slice(0, 8) + '01' }; }
   async ngOnInit() { await this.load(); }
   async load() {
@@ -96,7 +98,7 @@ export class Expenses implements OnInit {
     this.busy.set(false);
   }
   edit(x: Line) {
-    this.editId.set(x.id); this.f = { amount: +x.amount, note: x.name ?? '', on_date: x.on_date, category: x.category };
+    this.editId.set(x.id); this.f = { amount: +x.amount, note: x.name ?? '', on_date: x.on_date, category: x.category, payment_method: x.payment_method ?? 'cash' };
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   reset() { this.editId.set(null); const d = this.f.on_date; this.f = this.blank(); this.f.on_date = d || today(); }

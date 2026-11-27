@@ -77,7 +77,7 @@ export class Users implements OnInit {
     } catch (e) { this.say(errorText(e), true); }
   }
   async update(u: User, role: string, active: boolean) {
-    if (!(await this.confirm.ask(`Update ${u.username}?`, `Role: ${role} · ${active ? 'active' : 'deactivated (signed out)'}`, 'Update', !active))) return;
+    if (!(await this.confirm.ask(`Update ${u.username}?`, `Role: ${role} · ${active ? 'active' : 'deactivated (signed out)'}`, 'Update', !active))) { await this.load(); return; }
     try { await this.api.put(`/users/${u.id}`, { role, is_active: active }); this.say(`Updated ${u.username}`); }
     catch (e) { this.say(errorText(e), true); }
     await this.load();

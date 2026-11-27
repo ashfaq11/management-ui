@@ -59,7 +59,7 @@ export class PlanPackages implements OnInit {
     } catch (e) { this.err.set(true); this.msg.set(errorText(e)); }
   }
   async toggle(k: PlanPackage) {
-    if (!(await this.confirm.ask(`${k.is_active ? 'Hide' : 'Show'} ${k.name}?`, '', 'Yes', false))) return;
+    if (!(await this.confirm.ask(`${k.is_active ? 'Hide' : 'Show'} ${k.name}?`, '', 'Yes', false))) { await this.load(); return; }
     try { await this.api.put(`/plan-packages/${k.id}`, this.body({ ...k, amount: +k.amount, price: +k.price, validity_days: k.validity_days ?? null, is_active: !k.is_active })); await this.load(); }
     catch (e) { this.err.set(true); this.msg.set(errorText(e)); }
   }

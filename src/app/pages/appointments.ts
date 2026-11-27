@@ -466,7 +466,7 @@ export class Appointments implements OnInit {
   }
 
   async setStatus(a: Appointment, status: Status) {
-    if (status !== 'completed' && !(await this.confirm.ask(`Mark ${a.customer}'s appointment as ${status.replace('_', '-')}?`, status === 'cancelled' || status === 'no_show' ? 'Any membership hours taken will be returned.' : '', 'Yes, change', status === 'cancelled' || status === 'no_show'))) return;
+    if (status !== 'completed' && !(await this.confirm.ask(`Mark ${a.customer}'s appointment as ${status.replace('_', '-')}?`, status === 'cancelled' || status === 'no_show' ? 'Any membership hours taken will be returned.' : '', 'Yes, change', status === 'cancelled' || status === 'no_show'))) { await this.load(); return; }
     if (status === 'completed') {
       await this.askCompletion(a);
       return;

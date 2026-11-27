@@ -230,7 +230,7 @@ export class Staff implements OnInit {
     } catch (e) { this.tm.set(errorText(e)); }
   }
   async toggleT(x: Therapist) {
-    if (!(await this.confirm.ask(`${x.is_active ? 'Deactivate' : 'Activate'} ${x.name}?`, '', 'Yes', x.is_active))) return;
+    if (!(await this.confirm.ask(`${x.is_active ? 'Deactivate' : 'Activate'} ${x.name}?`, '', 'Yes', x.is_active))) { await this.reload(); return; }
     try { await this.api.put(`/therapists/${x.id}`, { ...x, is_active: !x.is_active }); } catch (e) { this.tm.set(errorText(e)); }
     await this.reload();
   }
@@ -262,7 +262,7 @@ export class Staff implements OnInit {
     } catch (e) { this.shiftErr.set(true); this.shiftMsg.set(errorText(e)); }
   }
   async toggleShift(x: Shift) {
-    if (!(await this.confirm.ask('Change this shift?', '', 'Yes', false))) return;
+    if (!(await this.confirm.ask('Change this shift?', '', 'Yes', false))) { await this.reload(); return; }
     try {
       await this.api.put('/shifts/' + x.id, { name:x.name, start_time:x.start_time.slice(0,5),
         end_time:x.end_time.slice(0,5), is_active:!x.is_active });
@@ -306,7 +306,7 @@ export class Staff implements OnInit {
     } catch (e) { this.sm.set(errorText(e)); }
   }
   async toggleS(x: Service) {
-    if (!(await this.confirm.ask(`${x.is_active ? 'Hide' : 'Show'} ${x.name}?`, '', 'Yes', false))) return;
+    if (!(await this.confirm.ask(`${x.is_active ? 'Hide' : 'Show'} ${x.name}?`, '', 'Yes', false))) { await this.reload(); return; }
     try { await this.api.put(`/services/${x.id}`, { ...x, is_active: !x.is_active }); } catch (e) { this.sm.set(errorText(e)); }
     await this.reload();
   }

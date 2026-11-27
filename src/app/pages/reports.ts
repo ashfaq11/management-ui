@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { DurationPipe } from '../shared/duration.pipe';
 import { Insights } from './insights';
 import { Api, errorText } from '../core/api';
 import { Customer, IncentiveReport, Service, Summary, Therapist } from '../core/models';
@@ -40,7 +41,7 @@ interface ShiftReport {
 }
 
 @Component({
-  selector: 'app-reports', imports: [FormsModule, DecimalPipe, Insights],
+  selector: 'app-reports', imports: [DurationPipe, FormsModule, DecimalPipe, Insights],
   template: `
   <nav class="tabs"><button [class.on]="tab === 'revenue'" (click)="tab = 'revenue'">Revenue & profit</button><button [class.on]="tab === 'therapists'" (click)="tab = 'therapists'">Therapists</button><button [class.on]="tab === 'plans'" (click)="tab = 'plans'">Plans</button><button [class.on]="tab === 'services'" (click)="tab = 'services'">Services</button><button [class.on]="tab === 'customers'" (click)="tab = 'customers'">Customers</button><button [class.on]="tab === 'payments'" (click)="tab = 'payments'">Payments</button><button [class.on]="tab === 'expenses'" (click)="tab = 'expenses'">Expenses</button><button [class.on]="tab === 'lapsed'" (click)="tab = 'lapsed'">Not seen lately</button><button [class.on]="tab === 'busy'" (click)="tab = 'busy'">Busy hours</button><button [class.on]="tab === 'utilisation'" (click)="tab = 'utilisation'">Utilisation</button><button [class.on]="tab === 'cancellations'" (click)="tab = 'cancellations'">Cancellations</button><button [class.on]="tab === 'expiring'" (click)="tab = 'expiring'">Expiring plans</button><button [class.on]="tab === 'dues'" (click)="tab = 'dues'">Pending dues</button></nav>
   @if (tab !== 'revenue') { <app-insights [kind]="tab" /> } @else {
@@ -171,13 +172,13 @@ interface ShiftReport {
     </table></div>
 
     <h3 style="margin-top:16px">All services done ({{ s.lines.length }})</h3>
-    <div class="wrap"><table><tr><th>Date</th><th>Customer</th><th>Service</th><th>Therapist</th><th class="num">Minutes</th><th>Paid via</th><th class="num">Price</th></tr>
+    <div class="wrap"><table><tr><th>Date</th><th>Customer</th><th>Service</th><th>Therapist</th><th>Duration</th><th>Paid via</th><th class="num">Price</th></tr>
     @for (x of s.lines; track x.id) {
-      <tr><td>{{ when(x.start_at) }}</td><td>{{ x.customer }}</td><td>{{ x.service }}</td><td>{{ x.therapist }}</td><td class="num">{{ x.duration_min }}</td><td>{{ via(x.paid_via) }}</td>
+      <tr><td>{{ when(x.start_at) }}</td><td>{{ x.customer }}</td><td>{{ x.service }}</td><td>{{ x.therapist }}</td><td>{{ x.duration_min | dur }}</td><td>{{ via(x.paid_via) }}</td>
         <td class="num">{{ x.price | number: '1.2-2' }}</td></tr>
     } @empty { <tr><td colspan="7">No completed services this month</td></tr> }
     @if (s.lines.length) {
-      <tr><th colspan="4">Total</th><th class="num">{{ s.minutes }}</th><th></th><th class="num">{{ s.revenue | number: '1.2-2' }}</th></tr>
+      <tr><th colspan="4">Total</th><th>{{ s.minutes | dur }}</th><th></th><th class="num">{{ s.revenue | number: '1.2-2' }}</th></tr>
     }
     </table></div>
   }

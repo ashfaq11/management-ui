@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { DurationPipe } from '../shared/duration.pipe';
 import { Api, errorText } from '../core/api';
 import { Auth } from '../core/auth';
 import { Customer, CustomerPage, Payment, PaymentMethod, PlanPackage } from '../core/models';
@@ -9,7 +10,7 @@ import { today } from '../core/util';
 type Edit = { name: string; phone: string; email: string; gender: string; dob: string; address: string; notes: string; preferred_payment_method: PaymentMethod | '' };
 
 @Component({
-  selector: 'app-customers', imports: [FormsModule, DecimalPipe],
+  selector: 'app-customers', imports: [DurationPipe, FormsModule, DecimalPipe],
   styles: [`
     .customer-list{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
     .customer-pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;flex-wrap:wrap}
@@ -164,16 +165,16 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
       }
       @let rows = history(c);
       <p style="margin:8px 0;color:var(--mut)">{{ rows.length }} visit(s) &middot; completed total Rs {{ spent(rows) | number: '1.2-2' }}</p>
-      <div class="wrap"><table><tr><th>When</th><th>Service</th><th>Therapist</th><th class="num">Price</th><th>Appointment</th><th>Payment</th><th>Plan deduction</th></tr>
+      <div class="wrap"><table><tr><th>When</th><th>Service</th><th>Duration</th><th>Therapist</th><th class="num">Price</th><th>Appointment</th><th>Payment</th><th>Plan deduction</th></tr>
       @for (a of rows; track a.id) {
-        <tr><td>{{ a.start_at.replace('T', ' ') }}</td><td>{{ a.service }}</td><td>{{ a.therapist }}</td>
+        <tr><td>{{ a.start_at.replace('T', ' ') }}</td><td>{{ a.service }}</td><td>{{ a.duration_min | dur }}</td><td>{{ a.therapist }}</td>
           <td class="num">{{ a.price | number: '1.2-2' }}</td><td><span class="badge">{{ a.status }}</span></td>
           <td><span class="badge">{{ paymentLabel(a) }}</span></td>
           <td>@if (a.plan_deducted != null && a.plan_unit) {
             {{ a.plan_name }} · {{ a.plan_unit === 'hours' ? (a.plan_deducted | number: '1.2-2') + ' hrs' : ('Rs ' + (a.plan_deducted | number: '1.2-2')) }}
             @if (a.plan_reversed_at) { <br><small>Reversed {{ when(a.plan_reversed_at) }}</small> }
           } @else { — }</td></tr>
-      } @empty { <tr><td colspan="7">No visits match.</td></tr> }
+      } @empty { <tr><td colspan="8">No visits match.</td></tr> }
       </table></div>
     </div>
   }`,

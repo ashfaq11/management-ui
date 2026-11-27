@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { DurationPipe } from '../shared/duration.pipe';
 import { SearchSelect, therapistOptions } from '../shared/search-select';
 import { Api, errorText } from '../core/api';
 import { Appointment, Customer, CustomerPlan, PaymentMethod, STATUSES, Service, Status, Therapist } from '../core/models';
@@ -8,7 +9,7 @@ import { WhenPicker } from '../shared/when-picker';
 import { today } from '../core/util';
 
 @Component({
-  selector: 'app-appointments', imports: [SearchSelect, FormsModule, DecimalPipe, WhenPicker],
+  selector: 'app-appointments', imports: [DurationPipe, SearchSelect, FormsModule, DecimalPipe, WhenPicker],
   styles: [`
     .cal-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
     .cal-toolbar .spacer{flex:1}
@@ -171,10 +172,10 @@ import { today } from '../core/util';
     } @else {
       <div class="wrap">
         @if (rows().length) {
-          <table><tr><th>Time</th><th>Customer</th><th>Therapist</th><th>Service</th><th class="num">Price</th><th class="num">Paid</th><th class="num">Due</th><th>Payment status</th><th>Appointment status</th><th>Actions</th></tr>
+          <table><tr><th>Time</th><th>Customer</th><th>Therapist</th><th>Service</th><th>Duration</th><th class="num">Price</th><th class="num">Paid</th><th class="num">Due</th><th>Payment status</th><th>Appointment status</th><th>Actions</th></tr>
           @for (a of rows(); track a.id) {
             <tr><td>{{ a.start_at.slice(11,16) }}</td><td>{{ a.customer }}<br><small>{{ a.phone }}</small></td>
-              <td>{{ a.therapist }}</td><td>{{ a.service }}</td><td class="num">{{ a.price | number:'1.2-2' }}</td>
+              <td>{{ a.therapist }}</td><td>{{ a.service }}</td><td>{{ a.duration_min | dur }}</td><td class="num">{{ a.price | number:'1.2-2' }}</td>
               <td class="num">{{ a.paid_amount || 0 | number:'1.2-2' }}</td><td class="num"><strong>{{ a.balance_due || 0 | number:'1.2-2' }}</strong></td>
               <td><span class="pay-state" [class.pay-pending]="paymentState(a)==='pending'"
                 [class.pay-partial]="paymentState(a)==='partial'" [class.pay-paid]="paymentState(a)==='paid'"

@@ -8,9 +8,9 @@ import { PlanPackage } from '../core/models';
 @Component({
   selector: 'app-plan-packages', imports: [FormsModule, DecimalPipe],
   template: `
-  <div class="page-head"><div><h1>Plans</h1><p>Set up prepaid plans once; staff assign them to customers at these prices.</p></div></div>
-  <div class="card"><h2>Plan packages</h2>
-    <p class="hint">The prepaid plans you sell. Staff can only assign these to customers, at these prices.</p>
+  <div class="page-head"><div><h1>Memberships</h1><p>Set up membership plans once; staff assign them to customers at these prices.</p></div></div>
+  <div class="card"><h2>Membership plans</h2>
+    <p class="hint">The membership plans you sell. Staff can only assign these to customers, at these prices.</p>
     <div class="wrap"><table><tr><th>Package</th><th>Gives</th><th class="num">Price</th><th>Valid for</th><th>Active</th><th></th></tr>
       @for (k of list(); track k.id) {
         <tr><td><b>{{ k.name }}</b></td><td>{{ k.plan_type === 'hours' ? (k.amount | number: '1.0-2') + ' hours' : '₹' + (k.amount | number: '1.0-2') + ' wallet' }}</td>
@@ -19,7 +19,7 @@ import { PlanPackage } from '../core/models';
           <td><button class="s" (click)="edit(k)">Edit</button></td></tr>
       } @empty { <tr><td colspan="6">No packages yet. Add your first one below.</td></tr> }
     </table></div>
-    <h3 style="margin-top:14px">{{ id() ? 'Edit package' : 'Add package' }}</h3>
+    <h3 style="margin-top:14px">{{ id() ? 'Edit membership plan' : 'Add membership plan' }}</h3>
     <div class="row">
       <div><label>Name *</label><input [(ngModel)]="f.name" placeholder="e.g. 10 Hours Gold"></div>
       <div style="flex:0 0 150px"><label>Type</label><select [(ngModel)]="f.plan_type"><option value="hours">Hours</option><option value="rupees">Rupees wallet</option></select></div>
@@ -27,7 +27,7 @@ import { PlanPackage } from '../core/models';
       <div style="flex:0 0 130px"><label>Price ₹ *</label><input type="number" min="0" step="1" [(ngModel)]="f.price"></div>
       <div style="flex:0 0 140px"><label>Valid for (days)</label><input type="number" min="1" [(ngModel)]="f.validity_days" placeholder="no expiry"></div>
     </div>
-    <button class="p" (click)="save()">{{ id() ? 'Save package' : 'Add package' }}</button>
+    <button class="p" (click)="save()">{{ id() ? 'Save membership plan' : 'Add membership plan' }}</button>
     @if (id()) { <button class="s" style="margin-left:8px" (click)="reset()">Cancel</button> }
     @if (msg()) { <div class="msg" [class.err]="err()">{{ msg() }}</div> }
   </div>`,

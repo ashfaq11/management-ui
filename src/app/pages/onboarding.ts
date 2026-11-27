@@ -25,7 +25,7 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
     </div>
     <label>Notes (allergies, skin type, preferences)</label><textarea rows="2" [(ngModel)]="c.notes"></textarea>
 
-    <h2 style="margin-top:16px">Prepaid plan (optional)</h2>
+    <h2 style="margin-top:16px">Membership plan (optional)</h2>
     <div class="row" style="align-items:flex-end">
       <div style="flex:2"><label>Plan</label><select [(ngModel)]="pkgChoice" (ngModelChange)="includePlan = $event === 'custom'">
         <option [ngValue]="null">No plan</option>

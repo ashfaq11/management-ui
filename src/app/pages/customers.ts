@@ -68,7 +68,7 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
         <div><label>Hours available</label><h2>{{ availableBalance(c, 'hours') | number: '1.2-2' }} hrs</h2></div>
         <div><label>Rupees available</label><h2>Rs {{ availableBalance(c, 'rupees') | number: '1.2-2' }}</h2></div>
       </div>
-      <h3>Prepaid plans</h3>
+      <h3>Membership plans</h3>
       <div class="wrap"><table><tr><th>Plan</th><th>Unit</th><th>Purchased</th><th>Used</th><th>Balance</th><th>Expires</th><th>Status</th><th>Payment</th>@if (auth.isAdmin()) {<th></th>}</tr>
         @for (p of (c.plans ?? []); track p.id) {
           <tr><td>{{ p.name }}</td><td>{{ p.plan_type === 'hours' ? 'Hours' : 'Rupees' }}</td>
@@ -107,18 +107,18 @@ type Edit = { name: string; phone: string; email: string; gender: string; dob: s
               <button class="s" style="margin-left:8px" (click)="planEdit = null">Cancel</button>
             </td></tr>
           }
-        } @empty { <tr><td colspan="8">No prepaid plans yet.</td></tr> }
+        } @empty { <tr><td colspan="8">No membership plans yet.</td></tr> }
       </table></div>
-      <h4>Assign a plan</h4>
+      <h4>Assign a membership</h4>
       @if (packages().length) {
         <div class="row" style="align-items:flex-end">
-          <div style="flex:2"><label>Plan package</label><select [(ngModel)]="assign.package_id">
-            <option [ngValue]="null">Choose a package…</option>
+          <div style="flex:2"><label>Membership plan</label><select [(ngModel)]="assign.package_id">
+            <option [ngValue]="null">Choose a membership…</option>
             @for (k of packages(); track k.id) { @if (k.is_active) { <option [ngValue]="k.id">{{ pkgLabel(k) }}</option> } }</select></div>
           <div style="flex:0 0 190px"><label>Payment</label><select [(ngModel)]="assign.paid"><option value="cash">Paid · Cash</option><option value="upi">Paid · UPI</option><option value="card">Paid · Card</option><option value="bank_transfer">Paid · Bank transfer</option><option value="other">Paid · Other</option><option value="pending">Pending (pay later)</option></select></div>
-          <div style="flex:0 0 auto"><button class="p" style="margin:0" (click)="assignPlan(c.id)" [disabled]="!assign.package_id">Assign plan</button></div>
+          <div style="flex:0 0 auto"><button class="p" style="margin:0" (click)="assignPlan(c.id)" [disabled]="!assign.package_id">Assign membership</button></div>
         </div>
-      } @else { <small>No plan packages yet. {{ auth.isAdmin() ? 'Add them in the Plans tab.' : 'Ask an admin to add them.' }}</small> }
+      } @else { <small>No membership plans yet. {{ auth.isAdmin() ? 'Add them in the Memberships tab.' : 'Ask an admin to add them.' }}</small> }
       @if (planMsg()) { <div class="msg" [class.err]="planErr()">{{ planMsg() }}</div> }
       @if (auth.isAdmin()) {
       <details class="sec"><summary>Custom plan <small>admin only, any amount and price</small></summary><div class="body">

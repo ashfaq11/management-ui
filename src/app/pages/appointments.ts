@@ -55,7 +55,7 @@ import { today } from '../core/util';
       <div><label>Notes</label><input [(ngModel)]="f.notes"></div>
       @if (!editId() && f.customer_id) {
         @if (activePlans().length) {
-          <div><label>Pay from plan (optional) · {{ planSummary() }}</label>
+          <div><label>Pay from membership (optional) · {{ planSummary() }}</label>
             <select [(ngModel)]="bookPlan"><option [ngValue]="null">No — decide at completion</option>
               @if (hasType('hours')) { <option value="hours">Deduct hours now</option> }
               @if (hasType('rupees')) { <option value="rupees">Deduct rupees now</option> }</select></div>
@@ -63,7 +63,7 @@ import { today } from '../core/util';
             <div><label>Hours to deduct</label><input type="number" min="0.25" step="0.25" [(ngModel)]="bookHours" [placeholder]="'' + (serviceMinutes() / 60)"></div>
           }
         } @else if (packages().length) {
-          <div><label>No active plan · sell one (optional)</label>
+          <div><label>No membership · sell one (optional)</label>
             <select [(ngModel)]="sellPkg"><option [ngValue]="null">No plan</option>
               @for (k of packages(); track k.id) { @if (k.is_active) { <option [ngValue]="k.id">{{ k.name }} · ₹{{ k.price }}</option> } }</select></div>
           @if (sellPkg) {
@@ -82,7 +82,7 @@ import { today } from '../core/util';
   </div>
   @if (pendingCompletion(); as pending) {
     <div class="card">
-      <h2>{{ planOnly() ? 'Pay from plan' : 'Complete appointment' }} #{{ pending.id }}</h2>
+      <h2>{{ planOnly() ? 'Pay from membership' : 'Complete appointment' }} #{{ pending.id }}</h2>
       <p>{{ pending.customer }} · {{ pending.service }} · {{ pending.duration_min }} min · Rs {{ pending.price | number: '1.2-2' }}</p>
       @if (pendingLoading()) {
         <p>Loading customer plan balances...</p>
@@ -111,7 +111,7 @@ import { today } from '../core/util';
             @if (!canDeduct('rupees', pending)) { <small>No single active rupees plan has enough balance.</small> }
           </div>
         </div>
-        @if ((pending.paid_amount ?? 0) > 0) { <small class="shift-warn">A payment has already been recorded for this appointment. Refund it before using a prepaid plan.</small> }
+        @if ((pending.paid_amount ?? 0) > 0) { <small class="shift-warn">A payment has already been recorded for this appointment. Refund it before using a membership plan.</small> }
         <small>The oldest eligible plan with enough balance will be used. Balances are not mixed between hours and rupees.</small>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
           @if (!planOnly()) { <button class="s" (click)="completeWith(null)">Complete without plan deduction</button> }
@@ -196,7 +196,7 @@ import { today } from '../core/util';
                 @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }</select></td>
               <td style="white-space:nowrap">
                 @if (a.status === 'booked') { <button class="s" (click)="edit(a)">Edit</button>
-                  @if (!a.paid_amount && a.payment_status !== 'prepaid') { <button class="s" (click)="usePlan(a)">Use plan</button> } }
+                  @if (!a.paid_amount && a.payment_status !== 'prepaid') { <button class="s" (click)="usePlan(a)">Use membership</button> } }
                 @if ((a.balance_due ?? 0) > 0 && (a.status === 'booked' || a.status === 'completed')) {
                   <button class="s" (click)="startPayment(a)">Collect</button>
                 }

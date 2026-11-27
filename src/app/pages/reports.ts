@@ -43,7 +43,7 @@ interface ShiftReport {
 @Component({
   selector: 'app-reports', imports: [DurationPipe, FormsModule, DecimalPipe, Insights],
   template: `
-  <nav class="tabs"><button [class.on]="tab === 'revenue'" (click)="tab = 'revenue'">Revenue & profit</button><button [class.on]="tab === 'therapists'" (click)="tab = 'therapists'">Therapists</button><button [class.on]="tab === 'plans'" (click)="tab = 'plans'">Plans</button><button [class.on]="tab === 'services'" (click)="tab = 'services'">Services</button><button [class.on]="tab === 'customers'" (click)="tab = 'customers'">Customers</button><button [class.on]="tab === 'payments'" (click)="tab = 'payments'">Payments</button><button [class.on]="tab === 'expenses'" (click)="tab = 'expenses'">Expenses</button><button [class.on]="tab === 'lapsed'" (click)="tab = 'lapsed'">Not seen lately</button><button [class.on]="tab === 'busy'" (click)="tab = 'busy'">Busy hours</button><button [class.on]="tab === 'utilisation'" (click)="tab = 'utilisation'">Utilisation</button><button [class.on]="tab === 'cancellations'" (click)="tab = 'cancellations'">Cancellations</button><button [class.on]="tab === 'expiring'" (click)="tab = 'expiring'">Expiring plans</button><button [class.on]="tab === 'dues'" (click)="tab = 'dues'">Pending dues</button></nav>
+  <nav class="tabs"><button [class.on]="tab === 'revenue'" (click)="tab = 'revenue'">Revenue & profit</button><button [class.on]="tab === 'therapists'" (click)="tab = 'therapists'">Therapists</button><button [class.on]="tab === 'plans'" (click)="tab = 'plans'">Memberships</button><button [class.on]="tab === 'services'" (click)="tab = 'services'">Services</button><button [class.on]="tab === 'customers'" (click)="tab = 'customers'">Customers</button><button [class.on]="tab === 'payments'" (click)="tab = 'payments'">Payments</button><button [class.on]="tab === 'expenses'" (click)="tab = 'expenses'">Expenses</button><button [class.on]="tab === 'lapsed'" (click)="tab = 'lapsed'">Not seen lately</button><button [class.on]="tab === 'busy'" (click)="tab = 'busy'">Busy hours</button><button [class.on]="tab === 'utilisation'" (click)="tab = 'utilisation'">Utilisation</button><button [class.on]="tab === 'cancellations'" (click)="tab = 'cancellations'">Cancellations</button><button [class.on]="tab === 'expiring'" (click)="tab = 'expiring'">Expiring memberships</button><button [class.on]="tab === 'dues'" (click)="tab = 'dues'">Pending dues</button></nav>
   @if (tab !== 'revenue') { <app-insights [kind]="tab" /> } @else {
   <div class="card"><div class="row">
     <div><label>Period</label>
@@ -138,7 +138,7 @@ interface ShiftReport {
           <tr><td><b>{{ methodLabel(m.method) }}</b></td><td class="num">{{ inr(m.services) }}</td><td class="num">{{ inr(m.plans) }}</td>
             <td class="num">{{ m.expenses ? inr(-m.expenses) : '—' }}</td><td class="num"><b>{{ inr(m.net) }}</b></td></tr>
         }
-        @if (s.paid_by_plan) { <tr><td>Prepaid plan (no new money)</td><td class="num">{{ inr(s.paid_by_plan) }}</td><td></td><td></td><td class="num">—</td></tr> }
+        @if (s.paid_by_plan) { <tr><td>Membership plan (no new money)</td><td class="num">{{ inr(s.paid_by_plan) }}</td><td></td><td></td><td class="num">—</td></tr> }
       </table></div>
     }
     @if (s.plan_lines?.length) {
@@ -183,7 +183,7 @@ interface ShiftReport {
     </table></div>
   }
   @if (planReport(); as p) {
-    <h2 style="margin-top:22px">Prepaid plan reporting</h2>
+    <h2 style="margin-top:22px">Membership reporting</h2>
     <p style="color:var(--mut)">Plan sales are for the selected period. Available balances show current, non-expired customer wallets.</p>
     <div class="grid">
       <div><label>Hours sold in period</label><h2>{{ p.summary.sold_hours | number: '1.2-2' }} hrs</h2></div>
@@ -194,12 +194,12 @@ interface ShiftReport {
         <small>Reversed: {{ p.summary.reversed_hours | number: '1.2-2' }} hrs</small></div>
       <div><label>Rupees deducted in period</label><h2>Rs {{ p.summary.deducted_rupees | number: '1.2-2' }}</h2>
         <small>Reversed: Rs {{ p.summary.reversed_rupees | number: '1.2-2' }}</small></div>
-      <div><label>Plans added</label><h2>{{ p.summary.plans_added }}</h2>
+      <div><label>Memberships sold</label><h2>{{ p.summary.plans_added }}</h2>
         <small>Top-ups: {{ p.summary.topups }} · {{ p.summary.topped_up_hours | number: '1.0-2' }} hrs · Rs {{ p.summary.topped_up_rupees | number: '1.0-2' }}</small></div>
       <div><label>Redemption records</label><h2>{{ p.summary.redemptions }}</h2></div>
     </div>
 
-    <h3>Plans added in period</h3>
+    <h3>Memberships sold in period</h3>
     <div class="wrap"><table><tr><th>Customer</th><th>Plan</th><th>Type</th><th class="num">Purchased</th><th class="num">Used</th><th class="num">Current balance</th><th>Expiry</th></tr>
       @for (x of p.plans; track x.id) {
         <tr><td>{{ x.customer }}<br><small>{{ x.phone }}</small></td><td>{{ x.name }}</td>

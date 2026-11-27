@@ -70,6 +70,8 @@ import { ConfirmHost } from '../shared/confirm';
           @for (s of spas(); track s.id) { @if (s.is_active) { <option [value]="s.id" [selected]="auth.pick()?.id === s.id">{{ s.name }}</option> } }
         </select>
       }
+      <button class="out" title="Theme" (click)="cycleTheme()">{{ theme() === 'dark' ? '☾' : theme() === 'light' ? '☀' : '◐' }}</button>
+      <button class="out" title="Text size" (click)="cycleSize()">{{ size() === 'normal' ? 'A' : size() === 'large' ? 'A+' : 'A++' }}</button>
       <a class="me" routerLink="/account" title="My account"><b>{{ initial() }}</b>
         <span>{{ auth.me()?.username }}<em>{{ auth.me()?.role }}</em></span></a>
       <button class="out" (click)="auth.logout()">Logout</button>
@@ -107,9 +109,21 @@ export class Shell implements OnInit {
   auth = inject(Auth); private api = inject(Api); private router = inject(Router);
   spas = signal<Spa[]>([]);
   menu = signal(false);
+  /** Theme (auto follows the device) and text size, remembered on this device. */
+  theme = signal(this.pref('sd.theme', 'auto')); size = signal(this.pref('sd.size', 'normal'));
+  private pref(k: string, d: string) { try { return localStorage.getItem(k) || d; } catch { return d; } }
+  private apply() {
+    const r = document.documentElement;
+    if (this.theme() === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', this.theme());
+    r.setAttribute('data-size', this.size());
+    try { localStorage.setItem('sd.theme', this.theme()); localStorage.setItem('sd.size', this.size()); } catch { /* private mode */ }
+  }
+  cycleTheme() { this.theme.set(({ auto: 'light', light: 'dark', dark: 'auto' } as Record<string, string>)[this.theme()]); this.apply(); }
+  cycleSize() { this.size.set(({ normal: 'large', large: 'xl', xl: 'normal' } as Record<string, string>)[this.size()]); this.apply(); }
   initial = computed(() => (this.auth.me()?.username ?? '?').charAt(0).toUpperCase());
 
   constructor() {
+    this.apply();
     // a superadmin lands on Spas until one is opened
     effect(() => { if (this.auth.isSuper() && !this.auth.pick() && (this.router.url === '/appointments' || this.router.url === '/dashboard')) this.router.navigateByUrl('/spas'); });
   }

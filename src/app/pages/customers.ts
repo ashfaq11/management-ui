@@ -81,7 +81,8 @@ import { Confirm } from '../shared/confirm';
             <td>{{ p.purchased_amount | number: '1.2-2' }}</td>
             <td>{{ p.used_amount | number: '1.2-2' }}</td>
             <td><strong>{{ p.balance | number: '1.2-2' }}</strong></td><td>{{ p.expires_on || 'Never' }}</td>
-            <td>{{ planStatus(p) }}</td>
+            <td>{{ planStatus(p) }}@if (+p.balance > 0 && ((p.plan_type === 'hours' && +p.balance <= 2) || +p.balance / +p.purchased_amount <= 0.2)) {
+              <span class="badge" style="background:var(--gold-soft);color:var(--gold);margin-left:4px">Low</span> }</td>
             <td>@if (p.paid_at) { <span class="badge" style="background:var(--ok-soft);color:var(--ok)">Paid</span> }
               @else { <span class="badge" style="background:var(--gold-soft);color:var(--gold)">Pending{{ p.price_paid ? ' · ₹' + (+p.price_paid).toLocaleString('en-IN') : '' }}</span>
                 @if (true) { <select style="width:auto;min-height:30px;padding:2px 26px 2px 8px;margin-left:6px" [(ngModel)]="markVia"><option value="cash">Cash</option><option value="upi">UPI</option><option value="card">Card</option><option value="bank_transfer">Bank</option><option value="other">Other</option></select><button class="s" style="margin-left:6px" (click)="markPaid(c.id, p.id)">Mark paid</button> } }

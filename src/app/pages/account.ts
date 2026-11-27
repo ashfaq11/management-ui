@@ -8,6 +8,18 @@ import { Auth } from '../core/auth';
   template: `
   @if (auth.isAdmin() && auth.hasSpa()) {
     <section class="card" style="max-width:520px;margin-bottom:16px">
+      <h2>Receipt address</h2>
+      <p style="margin:0 0 12px;color:var(--mut)">Enter the business address to print beneath your logo on customer receipts.</p>
+      <label for="spa-receipt-address">Spa address</label>
+      <textarea id="spa-receipt-address" name="receiptAddress" rows="3" maxlength="500"
+        [(ngModel)]="receiptAddress" (ngModelChange)="addressDirty.set(true)"
+        placeholder="Street, area, city, state, PIN code"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+        <button class="p" type="button" (click)="saveReceiptAddress()" [disabled]="addressBusy() || !addressDirty()">Save address</button>
+        @if (addressMsg()) { <small [style.color]="addressErr() ? 'var(--danger)' : 'var(--mut)'">{{ addressMsg() }}</small> }
+      </div>
+    </section>
+    <section class="card" style="max-width:520px;margin-bottom:16px">
       <h2>Spa logo</h2>
       <p style="margin:0 0 12px;color:var(--mut)">Choose a logo for {{ auth.spaName() }}. It appears in the app header and is saved only for this spa.</p>
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
@@ -46,13 +58,21 @@ export class Account implements OnInit {
   logoPreview = signal<string | null>(null);
   logoDirty = signal(false); logoBusy = signal(false);
   logoMsg = signal(''); logoErr = signal(false);
+  receiptAddress = '';
+  addressDirty = signal(false); addressBusy = signal(false);
+  addressMsg = signal(''); addressErr = signal(false);
   private logoValue: string | null = null;
 
   async ngOnInit() {
     if (!this.auth.isAdmin() || !this.auth.hasSpa()) return;
     try {
-      this.logoValue = (await this.api.get<{ logo_data_url: string | null }>('/spa/logo')).logo_data_url;
+      const [logo, details] = await Promise.all([
+        this.api.get<{ logo_data_url: string | null }>('/spa/logo'),
+        this.api.get<{ address: string | null }>('/spa/receipt-details'),
+      ]);
+      this.logoValue = logo.logo_data_url;
       this.logoPreview.set(this.logoValue);
+      this.receiptAddress = details.address ?? '';
     } catch (e) { this.logoMsg.set(errorText(e)); this.logoErr.set(true); }
   }
 
@@ -92,6 +112,19 @@ export class Account implements OnInit {
       this.logoDirty.set(true);
       this.logoMsg.set('Preview ready. Save to apply this logo.'); this.logoErr.set(false);
     } catch (e) { this.logoMsg.set(errorText(e)); this.logoErr.set(true); }
+  }
+
+  async saveReceiptAddress() {
+    this.addressBusy.set(true);
+    try {
+      const result = await this.api.put<{ address: string | null }>('/spa/receipt-details', {
+        address: this.receiptAddress.trim() || null,
+      });
+      this.receiptAddress = result.address ?? '';
+      this.addressDirty.set(false);
+      this.addressMsg.set('Receipt address saved'); this.addressErr.set(false);
+    } catch (e) { this.addressMsg.set(errorText(e)); this.addressErr.set(true); }
+    finally { this.addressBusy.set(false); }
   }
 
   async saveLogo() {

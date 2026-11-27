@@ -86,4 +86,4 @@ export interface Summary {
   lines: { id: number; start_at: string; duration_min: number; price: number; paid_via?: string | null; customer: string; service: string; therapist_id: number; therapist: string }[];
 }
 
-export interface User { id: number; username: string; role: Role; is_active: boolean; spa_id: number | null; spa: string | null; }
+export interface User { id: number; username: string; role: Role; is_active: boolean; spa_id: number | null; spa: string | null; last_login_at?: string | null; login_count?: number; }

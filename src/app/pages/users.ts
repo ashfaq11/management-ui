@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
@@ -5,14 +6,15 @@ import { Auth } from '../core/auth';
 import { Spa, User } from '../core/models';
 
 @Component({
-  selector: 'app-users', imports: [FormsModule],
+  selector: 'app-users', imports: [DatePipe, FormsModule],
   template: `
   <div class="page-head"><div><h1>Users</h1><p>{{ auth.isSuper() ? 'Every login across all spas.' : 'Logins for ' + auth.spaName() + '.' }}</p></div></div>
   <div class="card"><h2>Accounts</h2>
-    <div class="wrap"><table><tr><th>Username</th>@if (auth.isSuper()) { <th>Spa</th> }<th>Role</th><th>Active</th><th></th></tr>
+    <div class="wrap"><table><tr><th>Username</th>@if (auth.isSuper()) { <th>Spa</th><th>Last sign-in</th> }<th>Role</th><th>Active</th><th></th></tr>
     @for (u of users(); track u.id) {
       <tr><td>{{ u.username }} @if (u.id === auth.me()?.id) { <span class="badge">you</span> }</td>
-        @if (auth.isSuper()) { <td>{{ u.spa ?? '—' }}</td> }
+        @if (auth.isSuper()) { <td>{{ u.spa ?? '—' }}</td>
+          <td>{{ u.last_login_at ? (u.last_login_at | date: 'd MMM y, h:mm a') : 'Never' }}<small style="display:block;color:var(--mut)">{{ u.login_count || 0 }} sign-ins</small></td> }
         <td>@if (auth.isSuper() && u.role !== 'superadmin') {
           <select [ngModel]="u.role" (ngModelChange)="update(u, $event, !!u.is_active)">
             <option value="staff">staff</option><option value="admin">admin</option></select>

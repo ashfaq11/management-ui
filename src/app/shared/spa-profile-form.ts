@@ -10,9 +10,9 @@ export const blankProfile = (): SpaProfile => ({ contact_phone: '', contact_emai
   therapist_count: null, license_number: '', gstin: '', owner_name: '', owner_phone: '', manager_name: '', manager_phone: '' });
 /** What is still missing before a profile can be saved. */
 export const profileMissing = (p: SpaProfile) => [
-  [!/^[0-9+ -]{7,20}$/.test(p.contact_phone.trim()), 'spa phone'], [p.address.trim().length < 5, 'address'],
+  [!/^[0-9+ -]{10,20}$/.test(p.contact_phone.trim()), 'spa phone'], [p.address.trim().length < 5, 'address'],
   [!(Number(p.rooms) >= 1), 'rooms'], [p.therapist_count === null || String(p.therapist_count) === '', 'therapist count'],
-  [p.owner_name.trim().length < 2, 'owner name'], [!/^[0-9+ -]{7,20}$/.test(p.owner_phone.trim()), 'owner phone'],
+  [p.owner_name.trim().length < 2, 'owner name'], [!/^[0-9+ -]{10,20}$/.test(p.owner_phone.trim()), 'owner phone'],
 ].filter(([miss]) => miss).map(([, n]) => n as string);
 /** Body for the API: empty optional fields become null, counts become numbers. */
 export const profileBody = (p: SpaProfile) => Object.fromEntries(Object.entries(p).map(([k, v]) =>

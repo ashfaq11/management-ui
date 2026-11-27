@@ -34,8 +34,12 @@ import { today } from '../core/util';
   template: `
   <div class="card"><h2>{{ editId() ? "Edit appointment #" + editId() : "Book appointment" }}</h2>
     <div class="grid">
-      <div><label>Customer</label><select name="c" [(ngModel)]="f.customer_id">
-        @for (c of customers(); track c.id) { <option [ngValue]="c.id">{{ c.name }} - {{ c.phone }}</option> }</select></div>
+      <div><label>Search customer</label><input name="customerSearch" [(ngModel)]="customerSearch" placeholder="Search name, phone or email">
+        <select name="c" [(ngModel)]="f.customer_id">
+          @for (c of filteredCustomers(); track c.id) { <option [ngValue]="c.id">{{ c.name }} - {{ c.phone }}</option> }
+        </select>
+        <small>{{ customerSearch.trim() ? filteredCustomers().length + ' matching customers' : 'Showing first 5 customers. Search to find others.' }}</small>
+      </div>
       <div><label>Therapist</label><select [(ngModel)]="f.therapist_id">
         @for (t of therapists(); track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }</select></div>
       <div><label>Service</label><select [(ngModel)]="f.service_id">
@@ -189,7 +193,7 @@ import { today } from '../core/util';
 export class Appointments implements OnInit {
   private api = inject(Api);
   statuses = STATUSES;
-  customers = signal<Customer[]>([]); therapists = signal<Therapist[]>([]); services = signal<Service[]>([]);
+  customers = signal<Customer[]>([]); customerSearch = ''; therapists = signal<Therapist[]>([]); services = signal<Service[]>([]);
   rows = signal<Appointment[]>([]); day = signal(today());
   calendarMode = signal<'day'|'week'|'month'>('day');
   therapistFilter: number | null = null;
@@ -215,6 +219,15 @@ export class Appointments implements OnInit {
   }
 
   todayStr = today;
+  filteredCustomers(): Customer[] {
+    const query = this.customerSearch.trim().toLowerCase();
+    const all = this.customers();
+    const matches = query
+      ? all.filter((c) => [c.name, c.phone, c.email ?? ''].some((v) => v.toLowerCase().includes(query)))
+      : all.slice(0, 5);
+    const selected = all.find((c) => c.id === this.f.customer_id);
+    return selected && !matches.some((c) => c.id === selected.id) ? [selected, ...matches] : matches;
+  }
   /** The chosen service's length, so the free-time buttons fit it. */
   serviceMinutes() { return this.services().find((x) => x.id === this.f.service_id)?.duration_min ?? 60; }
   /** The length the free-time buttons must fit: the override if given, else the service's. */

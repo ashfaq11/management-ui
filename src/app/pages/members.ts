@@ -9,7 +9,7 @@ type Row = (string | number | null)[];
 @Component({
   selector: 'app-members', imports: [FormsModule, RouterLink],
   template: `
-  <div class="page-head"><div><h1>Memberships Opted</h1><p>Customers and the membership plans they have opted for.</p></div></div>
+  <div class="page-head"><div><h1>Customer Memberships</h1><p>Customers and the membership plans they have opted for.</p></div></div>
   <div class="figs">
     <div class="fig teal"><span>Members</span><b>{{ members() }}</b><small>customers with a plan</small></div>
     <div class="fig blue"><span>Active plans</span><b>{{ active() }}</b><small>balance left, not expired</small></div>

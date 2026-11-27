@@ -30,9 +30,10 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
     <div class="customer-list"><div><label>Search name or phone</label>
       <input [ngModel]="q" (ngModelChange)="search($event)" placeholder="Type a name or phone number"></div>
       <button class="s" style="margin-top:22px" (click)="clearSearch()">Clear</button></div>
-    <div class="wrap"><table><tr><th>Name</th><th>Phone</th><th>Email</th><th>Since</th><th></th></tr>
+    <div class="wrap"><table><tr><th>Name</th><th>Phone</th><th>Membership left</th><th>Since</th><th></th></tr>
     @for (c of list(); track c.id) {
-      <tr><td>{{ c.name }}</td><td>{{ c.phone }}</td><td>{{ c.email }}</td><td>{{ c.created_at.slice(0, 10) }}</td>
+      <tr><td>{{ c.name }}</td><td>{{ c.phone }}</td><td>@if ($any(c).hours_left || $any(c).rupees_left) { <button class="s" title="View / edit membership" (click)="openPlans(c.id)">
+          {{ $any(c).hours_left ? (+$any(c).hours_left) + ' hrs' : '' }}{{ $any(c).hours_left && $any(c).rupees_left ? ' · ' : '' }}{{ $any(c).rupees_left ? '₹' + (+$any(c).rupees_left) : '' }}</button> } @else { <small>—</small> }</td><td>{{ c.created_at.slice(0, 10) }}</td>
         <td style="white-space:nowrap"><button class="s" (click)="open(c.id)">History</button>
           <button class="s" (click)="editFromList(c.id)">Edit</button>
           @if (c.phone) { <a [href]="wa(c.phone, c.name)" target="_blank" rel="noopener"><button class="s" title="WhatsApp">WhatsApp</button></a> }</td></tr>
@@ -80,7 +81,7 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
         <div><label>Rupees available</label><h2>Rs {{ availableBalance(c, 'rupees') | number: '1.2-2' }}</h2></div>
       </div>
       <h3>Membership plans</h3>
-      <div class="wrap"><table><tr><th>Plan</th><th>Unit</th><th>Purchased</th><th>Used</th><th>Balance</th><th>Expires</th><th>Status</th><th>Payment</th>@if (auth.isAdmin()) {<th></th>}</tr>
+      <div class="wrap" id="cust-plans"><table><tr><th>Plan</th><th>Unit</th><th>Purchased</th><th>Used</th><th>Balance</th><th>Expires</th><th>Status</th><th>Payment</th>@if (auth.isAdmin()) {<th></th>}</tr>
         @for (p of (c.plans ?? []); track p.id) {
           <tr><td>{{ p.name }}</td><td>{{ p.plan_type === 'hours' ? 'Hours' : 'Rupees' }}</td>
             <td>{{ p.purchased_amount | number: '1.2-2' }}</td>
@@ -111,7 +112,7 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
               } @else {
                 <div class="row">
                   <div><label>Plan name</label><input [(ngModel)]="planEdit!.name"></div>
-                  <div><label>Balance left ({{ p.plan_type === 'hours' ? 'hours' : 'Rs' }})</label><input type="number" min="0" step="0.25" [(ngModel)]="planEdit!.balance"></div>
+                  <div><label>Adjust balance left — lower it to reduce ({{ p.plan_type === 'hours' ? 'hours' : 'Rs' }})</label><input type="number" min="0" step="0.25" [(ngModel)]="planEdit!.balance"></div>
                   <div><label>Expiry date (blank = never)</label><input type="date" [(ngModel)]="planEdit!.expires_on"></div>
                   <div><label>Notes</label><input [(ngModel)]="planEdit!.notes"></div>
                 </div>
@@ -329,6 +330,7 @@ export class Customers implements OnInit {
       await this.open(id);
     } catch (e) { this.planErr.set(true); this.planMsg.set(errorText(e)); }
   }
+  async openPlans(id: number) { await this.open(id); setTimeout(() => document.getElementById('cust-plans')?.scrollIntoView({ behavior: 'smooth' }), 50); }
   async editFromList(id: number) { await this.open(id); const c = this.sel(); if (c) this.startEdit(c); }
   wa(phone: string, name: string) { return this.waT.link(phone, 'hello', { name }); }
   startEdit(c: Customer) {

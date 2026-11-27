@@ -5,6 +5,7 @@ import { Api, errorText } from '../core/api';
 import { PlanPackage } from '../core/models';
 
 /** Admin: the plans the spa sells, at fixed prices. Staff assign these to customers. */
+import { Confirm } from '../shared/confirm';
 @Component({
   selector: 'app-plan-packages', imports: [FormsModule, DecimalPipe],
   template: `
@@ -33,6 +34,7 @@ import { PlanPackage } from '../core/models';
   </div>`,
 })
 export class PlanPackages implements OnInit {
+  private confirm = inject(Confirm);
   private api = inject(Api);
   list = signal<PlanPackage[]>([]); id = signal<number | null>(null); msg = signal(''); err = signal(false);
   f = this.blank();
@@ -45,6 +47,7 @@ export class PlanPackages implements OnInit {
     return { ...k, name: k.name.trim(), amount: Number(k.amount), price: Number(k.price), validity_days: k.validity_days ? Number(k.validity_days) : null };
   }
   async save() {
+    if (!(await this.confirm.ask('Save this membership plan?', '', 'Save', false))) return;
     if (!this.f.name.trim() || !(Number(this.f.amount) > 0) || this.f.price === null || String(this.f.price) === '') {
       this.err.set(true); this.msg.set('Enter a name, amount and price.'); return;
     }
@@ -56,6 +59,7 @@ export class PlanPackages implements OnInit {
     } catch (e) { this.err.set(true); this.msg.set(errorText(e)); }
   }
   async toggle(k: PlanPackage) {
+    if (!(await this.confirm.ask(`${k.is_active ? 'Hide' : 'Show'} ${k.name}?`, '', 'Yes', false))) return;
     try { await this.api.put(`/plan-packages/${k.id}`, this.body({ ...k, amount: +k.amount, price: +k.price, validity_days: k.validity_days ?? null, is_active: !k.is_active })); await this.load(); }
     catch (e) { this.err.set(true); this.msg.set(errorText(e)); }
   }

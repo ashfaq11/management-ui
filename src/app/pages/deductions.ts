@@ -8,6 +8,7 @@ interface Row { id: number; therapist: string; kind: string; amount: number; rea
 const KINDS = ['advance', 'leave', 'damage', 'fine', 'loan', 'other'];
 
 /** Payroll: salary deductions with a reason; they come off that month's net pay. */
+import { Confirm } from '../shared/confirm';
 @Component({
   selector: 'app-deductions', imports: [FormsModule, SearchSelect],
   template: `
@@ -30,6 +31,7 @@ const KINDS = ['advance', 'leave', 'damage', 'fine', 'loan', 'other'];
   </div>`,
 })
 export class Deductions {
+  private confirm = inject(Confirm);
   month = input.required<string>();
   therapists = input<{ therapist_id: number; therapist: string }[]>([]);
   changed = output<void>();
@@ -43,6 +45,7 @@ export class Deductions {
     try { this.rows.set(await this.api.get<Row[]>('/deductions', { month: m })); } catch (e) { this.err.set(true); this.msg.set(errorText(e)); }
   }
   async add() {
+    if (!(await this.confirm.ask('Add this salary deduction?', `₹${this.f.amount} · ${this.f.reason}`, 'Add', false))) return;
     if (!this.f.therapist_id || !(Number(this.f.amount) > 0) || this.f.reason.trim().length < 3) {
       this.err.set(true); this.msg.set('Choose the therapist, amount and a reason.'); return;
     }
@@ -53,6 +56,7 @@ export class Deductions {
     } catch (e) { this.err.set(true); this.msg.set(errorText(e)); }
   }
   async remove(x: Row) {
+    if (!(await this.confirm.ask('Delete this deduction?', `${x.therapist} · ₹${x.amount}`, 'Delete', true))) return;
     try { await this.api.delete(`/deductions/${x.id}`); await this.load(); this.changed.emit(); }
     catch (e) { this.err.set(true); this.msg.set(errorText(e)); }
   }

@@ -4,8 +4,9 @@ import { Api } from '../core/api';
 import { Auth } from '../core/auth';
 import { Spa } from '../core/models';
 
+import { ConfirmHost } from '../shared/confirm';
 @Component({
-  selector: 'app-shell', imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  selector: 'app-shell', imports: [ConfirmHost, RouterOutlet, RouterLink, RouterLinkActive],
   styles: [`
     header{position:sticky;top:0;z-index:10;background:linear-gradient(120deg,var(--hdr1) 0%,var(--hdr2) 55%,var(--hdr3) 100%);color:#fff;
       box-shadow:0 4px 18px rgba(0,0,0,.16)}
@@ -99,6 +100,7 @@ import { Spa } from '../core/models';
   </aside>
   @if (menu()) { <div class="scrim" (click)="menu.set(false)"></div> }
   <main><router-outlet /></main>
+  <app-confirm-host />
   </div>`,
 })
 export class Shell implements OnInit {

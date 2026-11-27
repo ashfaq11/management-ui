@@ -7,6 +7,7 @@ import { Auth } from '../core/auth';
 import { Spa } from '../core/models';
 import { SpaProfileForm, blankProfile, profileBody, profileMissing } from '../shared/spa-profile-form';
 
+import { Confirm } from '../shared/confirm';
 @Component({
   selector: 'app-spas', imports: [SpaProfileForm, FormsModule, DecimalPipe, DatePipe],
   styles: [`
@@ -105,6 +106,7 @@ import { SpaProfileForm, blankProfile, profileBody, profileMissing } from '../sh
   </div>`,
 })
 export class Spas implements OnInit {
+  private confirm = inject(Confirm);
   private api = inject(Api); private auth = inject(Auth); private router = inject(Router);
   spas = signal<Spa[]>([]); msg = signal(''); err = signal(false); busy = signal(false);
   showNew = signal(false); editId = signal<number | null>(null); editName = '';
@@ -129,12 +131,14 @@ export class Spas implements OnInit {
     base.setDate(base.getDate() + days); this.pf.plan_end = base.toISOString().slice(0, 10); this.pf.is_trial = false;
   }
   async savePlan(s: Spa) {
+    if (!(await this.confirm.ask(`Save plan dates for ${s.name}?`, `${this.pf.plan_start || '—'} → ${this.pf.plan_end || 'no end'}`, 'Save', false))) return;
     try {
       await this.api.put(`/spas/${s.id}`, this.body(s, { plan_start: this.pf.plan_start || null, plan_end: this.pf.plan_end || null, is_trial: this.pf.is_trial }));
       this.planId.set(null); this.say(`${s.name}: plan saved`); await this.load();
     } catch (e) { this.say(errorText(e), true); }
   }
   async savePlatform() {
+    if (!(await this.confirm.ask('Save renewal contact and sign-up settings?', '', 'Save', false))) return;
     try { await this.api.put('/platform/settings', { ...this.pc, trial_days: Number(this.pc.trial_days) }); this.say('Renewal contact saved'); }
     catch (e) { this.say(errorText(e), true); }
   }
@@ -151,6 +155,7 @@ export class Spas implements OnInit {
   private say(t: string, e = false) { this.msg.set(t); this.err.set(e); }
 
   async create() {
+    if (!(await this.confirm.ask('Create this spa and its admin?', this.n.name, 'Create', false))) return;
     this.busy.set(true);
     try {
       const miss = profileMissing(this.prof);
@@ -168,6 +173,7 @@ export class Spas implements OnInit {
     catch (e) { this.say(errorText(e), true); }
   }
   async toggle(s: Spa) {
+    if (!(await this.confirm.ask(`${s.is_active ? 'Deactivate' : 'Activate'} ${s.name}?`, s.is_active ? 'All its logins will be signed out.' : '', 'Yes', s.is_active))) return;
     try {
       await this.api.put(`/spas/${s.id}`, this.body(s, { is_active: !s.is_active }));
       if (s.is_active && this.auth.pick()?.id === s.id) this.auth.choose(null);

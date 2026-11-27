@@ -8,6 +8,7 @@ import { PaymentMethod, Service, Therapist, PlanPackage } from '../core/models';
 
 const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', address: '', notes: '' });
 
+import { Confirm } from '../shared/confirm';
 @Component({
   selector: 'app-onboarding', imports: [SearchSelect, FormsModule, WhenPicker],
   template: `
@@ -59,6 +60,7 @@ const blank = () => ({ name: '', phone: '', email: '', gender: '', dob: '', addr
   </div>`,
 })
 export class Onboarding implements OnInit {
+  private confirm = inject(Confirm);
   tOpts = computed(() => therapistOptions(this.therapists()));
   /** One select = paid or not + how: 'cash' | 'upi' | ... | 'pending'. */
   payOf(v: unknown) { const m = String(v); return { paid: m !== 'pending', payment_method: m === 'pending' ? null : m }; }
@@ -101,6 +103,7 @@ export class Onboarding implements OnInit {
   }
 
   async save() {
+    if (!(await this.confirm.ask('Register this customer?', [this.c.name, this.pkgChoice ? 'with a membership' : '', this.bookNow ? 'and book the first appointment' : ''].filter(Boolean).join(' '), 'Register', false))) return;
     if (this.saving()) return;
     this.msg.set('');
     if (!this.c.name.trim() || !this.c.phone.trim()) {

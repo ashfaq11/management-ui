@@ -17,6 +17,7 @@ const blankT = () => ({ name: '', phone: '', fixed_salary: 0, incentive_percent:
 const mask = (v?: string) => (v ? (v.length > 4 ? '•••• ' + v.slice(-4) : v) : '');
 const blankS = () => ({ name: '', price: 0, duration_min: 60 });
 
+import { Confirm } from '../shared/confirm';
 @Component({
   selector: 'app-staff', imports: [SearchSelect, FormsModule, DecimalPipe, Bonuses],
   styles: [`
@@ -162,6 +163,7 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
   @if (!svc) { <app-bonuses [therapists]="therapists()" /> }`,
 })
 export class Staff implements OnInit {
+  private confirm = inject(Confirm);
   tOpts = computed(() => therapistOptions(this.therapists()));
   private api = inject(Api);
   /** /services shows only the services card; /staff the therapists side. */
@@ -217,6 +219,7 @@ export class Staff implements OnInit {
   }
   resetT() { this.tId.set(null); this.t = blankT(); this.tActive = true; }
   async saveT() {
+    if (!(await this.confirm.ask('Save therapist?', '', 'Save', false))) return;
     try {
       const body: Record<string, unknown> = { ...this.t, phone: this.t.phone || null, is_active: this.tActive };
       for (const k of [...DETAILS, 'joined_on']) if (body[k] === '' || body[k] === null) body[k] = null;
@@ -227,6 +230,7 @@ export class Staff implements OnInit {
     } catch (e) { this.tm.set(errorText(e)); }
   }
   async toggleT(x: Therapist) {
+    if (!(await this.confirm.ask(`${x.is_active ? 'Deactivate' : 'Activate'} ${x.name}?`, '', 'Yes', x.is_active))) return;
     try { await this.api.put(`/therapists/${x.id}`, { ...x, is_active: !x.is_active }); } catch (e) { this.tm.set(errorText(e)); }
     await this.reload();
   }
@@ -243,6 +247,7 @@ export class Staff implements OnInit {
     this.shiftMsg.set('');
   }
   async saveShift() {
+    if (!(await this.confirm.ask('Save shift?', '', 'Save', false))) return;
     if (!this.shiftForm.name.trim() || !this.shiftForm.start_time || !this.shiftForm.end_time
         || this.shiftForm.end_time <= this.shiftForm.start_time) {
       this.shiftErr.set(true); this.shiftMsg.set('Enter a shift name and an end time later than the start time.'); return;
@@ -257,6 +262,7 @@ export class Staff implements OnInit {
     } catch (e) { this.shiftErr.set(true); this.shiftMsg.set(errorText(e)); }
   }
   async toggleShift(x: Shift) {
+    if (!(await this.confirm.ask('Change this shift?', '', 'Yes', false))) return;
     try {
       await this.api.put('/shifts/' + x.id, { name:x.name, start_time:x.start_time.slice(0,5),
         end_time:x.end_time.slice(0,5), is_active:!x.is_active });
@@ -264,6 +270,7 @@ export class Staff implements OnInit {
     } catch (e) { this.shiftErr.set(true); this.shiftMsg.set(errorText(e)); }
   }
   async assignShift() {
+    if (!(await this.confirm.ask('Assign this shift?', '', 'Assign', false))) return;
     const a = this.assignmentForm;
     if (!a.therapist_id || !a.shift_id) {
       this.assignmentErr.set(true); this.assignmentMsg.set('Choose a therapist and a shift.'); return;
@@ -276,6 +283,7 @@ export class Staff implements OnInit {
     } catch (e) { this.assignmentErr.set(true); this.assignmentMsg.set(errorText(e)); }
   }
   async removeAssignment(x: ShiftAssignment) {
+    if (!(await this.confirm.ask('Remove this shift assignment?', '', 'Remove', true))) return;
     try {
       await this.api.delete('/shift-assignments/' + x.id);
       this.assignmentMsg.set('Shift assignment removed.'); this.assignmentErr.set(false);
@@ -289,6 +297,7 @@ export class Staff implements OnInit {
   }
   resetS() { this.sId.set(null); this.s = blankS(); this.sActive = true; }
   async saveS() {
+    if (!(await this.confirm.ask('Save service?', '', 'Save', false))) return;
     try {
       const body = { ...this.s, is_active: this.sActive };
       const id = this.sId();
@@ -297,6 +306,7 @@ export class Staff implements OnInit {
     } catch (e) { this.sm.set(errorText(e)); }
   }
   async toggleS(x: Service) {
+    if (!(await this.confirm.ask(`${x.is_active ? 'Hide' : 'Show'} ${x.name}?`, '', 'Yes', false))) return;
     try { await this.api.put(`/services/${x.id}`, { ...x, is_active: !x.is_active }); } catch (e) { this.sm.set(errorText(e)); }
     await this.reload();
   }

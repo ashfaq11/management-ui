@@ -9,6 +9,7 @@ interface Att { therapist_id: number; therapist: string; scheduled: number; away
 const KINDS: Record<string, string> = { leave: 'Leave', sick: 'Sick', absent: 'Absent (no notice)', holiday: 'Holiday' };
 
 import { exportTable } from '../shared/export';
+import { Confirm } from '../shared/confirm';
 @Component({
   selector: 'app-attendance', imports: [SearchSelect, FormsModule],
   template: `
@@ -46,6 +47,7 @@ import { exportTable } from '../shared/export';
   </div>`,
 })
 export class Attendance implements OnInit {
+  private confirm = inject(Confirm);
   tOpts = computed(() => this.team().map((t) => ({ id: t.therapist_id, label: t.therapist })));
   private api = inject(Api);
   kinds = Object.entries(KINDS);
@@ -62,6 +64,7 @@ export class Attendance implements OnInit {
     } catch (e) { this.err.set(true); this.msg.set(errorText(e)); }
   }
   async add() {
+    if (!(await this.confirm.ask('Mark this absence?', '', 'Mark absent', false))) return;
     if (!this.f.therapist_id || !this.f.on_date) { this.err.set(true); this.msg.set('Choose the therapist and date.'); return; }
     try {
       const r = await this.api.post<{ days: number }>('/absences', { ...this.f, to_date: this.f.to_date || null, note: this.f.note.trim() || null });
@@ -70,6 +73,7 @@ export class Attendance implements OnInit {
     } catch (e) { this.err.set(true); this.msg.set(errorText(e)); }
   }
   async remove(x: Absence) {
+    if (!(await this.confirm.ask('Remove this absence?', `${x.therapist} · ${x.on_date}`, 'Remove', true))) return;
     try { await this.api.delete(`/absences/${x.id}`); await this.load(); } catch (e) { this.err.set(true); this.msg.set(errorText(e)); }
   }
   async exp(ext: 'pdf' | 'xlsx') {

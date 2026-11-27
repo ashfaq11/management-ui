@@ -10,6 +10,7 @@ interface Regular { id: number; name: string; category: string; amount: number; 
 interface Month { total: number; lines: Line[]; by_category: { category: string; amount: number }[]; regular: Regular[]; }
 
 import { exportTable } from '../shared/export';
+import { Confirm } from '../shared/confirm';
 @Component({
   selector: 'app-expenses', imports: [FormsModule, DecimalPipe],
   template: `
@@ -74,6 +75,7 @@ import { exportTable } from '../shared/export';
   </details>`,
 })
 export class Expenses implements OnInit {
+  private confirm = inject(Confirm);
   private api = inject(Api);
   cats = CATS;
   month = today().slice(0, 7);
@@ -90,6 +92,7 @@ export class Expenses implements OnInit {
   private say(t: string, e = false) { this.msg.set(t); this.err.set(e); }
 
   async add() {
+    if (!(await this.confirm.ask(this.editId() ? 'Save expense changes?' : 'Add this expense?', `₹${this.f.amount ?? ''} · ${this.f.note}`, 'Save', false))) return;
     if (!(Number(this.f.amount) > 0) || !this.f.note.trim()) { this.say('Enter the amount and the reason.', true); return; }
     this.busy.set(true);
     try {
@@ -107,6 +110,7 @@ export class Expenses implements OnInit {
   }
   reset() { this.editId.set(null); const d = this.f.on_date; this.f = this.blank(); this.f.on_date = d || today(); }
   async remove(x: Line) {
+    if (!(await this.confirm.ask('Delete this expense?', `₹${x.amount} · ${x.name ?? ''}`, 'Delete', true))) return;
     try { await this.api.delete(`/expenses/${x.id}`); this.say('Expense deleted.'); await this.load(); } catch (e) { this.say(errorText(e), true); }
   }
 
@@ -116,6 +120,7 @@ export class Expenses implements OnInit {
   }
   resetR() { this.rId.set(null); this.rEnds = null; this.r = this.blankR(); }
   async saveR() {
+    if (!(await this.confirm.ask('Save this regular monthly expense?', '', 'Save', false))) return;
     if (!this.r.name.trim() || !(Number(this.r.amount) > 0)) { this.say('Enter a name and a monthly amount.', true); return; }
     try {
       const body = { ...this.r, name: this.r.name.trim(), amount: Number(this.r.amount), ends_on: this.rEnds };

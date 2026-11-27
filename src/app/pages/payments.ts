@@ -7,6 +7,7 @@ import { Payment, PaymentReport } from '../core/models';
 import { today } from '../core/util';
 
 import { exportTable } from '../shared/export';
+import { Confirm } from '../shared/confirm';
 @Component({
   selector: 'app-payments', imports: [FormsModule, DecimalPipe, DatePipe],
   styles: [`
@@ -73,6 +74,7 @@ import { exportTable } from '../shared/export';
   `,
 })
 export class Payments implements OnInit {
+  private confirm = inject(Confirm);
   private api = inject(Api);
   auth = inject(Auth);
   day = today();
@@ -129,6 +131,7 @@ export class Payments implements OnInit {
   }
 
   async refund(p: Payment) {
+    if (!(await this.confirm.ask('Refund this payment?', 'This cannot be undone from here.', 'Refund', true))) return;
     try {
       if (!(Number(this.refundAmount)>0)) throw new Error('Enter a refund amount greater than zero.');
       await this.api.post('/payments/'+p.id+'/refunds',{amount:Number(this.refundAmount),reason:this.refundReason.trim()||null});

@@ -5,6 +5,7 @@ import { Api, errorText } from '../core/api';
 import { Auth } from '../core/auth';
 import { Spa, User } from '../core/models';
 
+import { Confirm } from '../shared/confirm';
 @Component({
   selector: 'app-users', imports: [DatePipe, FormsModule],
   template: `
@@ -49,6 +50,7 @@ import { Spa, User } from '../core/models';
   </div>`,
 })
 export class Users implements OnInit {
+  private confirm = inject(Confirm);
   private api = inject(Api);
   auth = inject(Auth);
   users = signal<User[]>([]); spas = signal<Spa[]>([]); nspa: number | null = null; msg = signal(''); isErr = signal(false); resetId = signal<number | null>(null);
@@ -66,6 +68,7 @@ export class Users implements OnInit {
   private say(t: string, err = false) { this.msg.set(t); this.isErr.set(err); }
 
   async add() {
+    if (!(await this.confirm.ask('Create this login?', `${this.nu} · ${this.nr}`, 'Create', false))) return;
     try {
       const sup = this.auth.isSuper();
       await this.api.post('/users', { username: this.nu.trim(), password: this.np, role: sup ? this.nr : 'staff',
@@ -74,12 +77,14 @@ export class Users implements OnInit {
     } catch (e) { this.say(errorText(e), true); }
   }
   async update(u: User, role: string, active: boolean) {
+    if (!(await this.confirm.ask(`Update ${u.username}?`, `Role: ${role} · ${active ? 'active' : 'deactivated (signed out)'}`, 'Update', !active))) return;
     try { await this.api.put(`/users/${u.id}`, { role, is_active: active }); this.say(`Updated ${u.username}`); }
     catch (e) { this.say(errorText(e), true); }
     await this.load();
   }
   startReset(u: User) { this.newPw = ''; this.resetId.set(u.id); }
   async reset(u: User) {
+    if (!(await this.confirm.ask(`Reset password for ${u.username}?`, 'They will be signed out everywhere.', 'Reset', true))) return;
     try {
       await this.api.post(`/users/${u.id}/password`, { password: this.newPw });
       this.say(`Password reset for ${u.username}; they have been signed out`); this.resetId.set(null);

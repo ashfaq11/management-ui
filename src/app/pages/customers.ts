@@ -10,6 +10,7 @@ import { today } from '../core/util';
 type Edit = { name: string; phone: string; email: string; gender: string; dob: string; address: string; notes: string; preferred_payment_method: PaymentMethod | '' };
 
 import { RouterLink } from '@angular/router';
+import { Confirm } from '../shared/confirm';
 @Component({
   selector: 'app-customers', imports: [RouterLink, DurationPipe, FormsModule, DecimalPipe],
   styles: [`
@@ -169,6 +170,7 @@ import { RouterLink } from '@angular/router';
   }`,
 })
 export class Customers implements OnInit {
+  private confirm = inject(Confirm);
   /** One select = paid or not + how: 'cash' | 'upi' | ... | 'pending'. */
   markVia = 'cash';
   payOf(v: unknown) { const m = String(v); return { paid: m !== 'pending', payment_method: m === 'pending' ? null : m }; }
@@ -185,6 +187,7 @@ export class Customers implements OnInit {
     return `${k.name} · ${gives} · ₹${(+k.price).toLocaleString('en-IN')}${k.validity_days ? ' · ' + k.validity_days + ' days' : ''}`;
   }
   async assignPlan(cid: number) {
+    if (!(await this.confirm.ask('Assign this membership?', this.packages().find((k) => k.id === this.assign.package_id)?.name ?? '', 'Assign', false))) return;
     try {
       await this.api.post(`/customers/${cid}/plans/assign`, { package_id: this.assign.package_id, ...this.payOf(this.assign.paid) });
       this.planErr.set(false); this.planMsg.set('Plan assigned.'); this.assign = { package_id: null, paid: 'cash' }; await this.open(cid);
@@ -196,14 +199,17 @@ export class Customers implements OnInit {
     this.planEdit = { id: p.id, mode, plan_type: p.plan_type, name: p.name, expires_on: p.expires_on ?? '', notes: p.notes ?? '', amount: null, price_paid: null, paid: 'cash', note: '' };
   }
   async markPaid(cid: number, pid: number) {
+    if (!(await this.confirm.ask('Mark this membership as paid?', 'Paid by ' + this.markVia, 'Mark paid', false))) return;
     try { await this.api.put(`/customers/${cid}/plans/${pid}/paid`, { paid: 'cash' }); this.planErr.set(false); this.planMsg.set('Plan marked paid.'); await this.open(cid); }
     catch (x) { this.planErr.set(true); this.planMsg.set(errorText(x)); }
   }
   async markTopupPaid(cid: number, tid: number) {
+    if (!(await this.confirm.ask('Mark this top-up as paid?', 'Paid by ' + this.markVia, 'Mark paid', false))) return;
     try { await this.api.put(`/plan-topups/${tid}/paid`, { paid: 'cash' }); this.planErr.set(false); this.planMsg.set('Top-up marked paid.'); await this.open(cid); }
     catch (x) { this.planErr.set(true); this.planMsg.set(errorText(x)); }
   }
   async savePlan(cid: number) {
+    if (!(await this.confirm.ask(this.planEdit?.mode === 'topup' ? 'Add this top-up?' : 'Save membership changes?', '', 'Yes, save', false))) return;
     const e = this.planEdit!;
     try {
       if (e.mode === 'topup') {
@@ -307,6 +313,7 @@ export class Customers implements OnInit {
       address: c.address ?? '', notes: c.notes ?? '', preferred_payment_method: c.preferred_payment_method ?? '' };
   }
   async save(id: number) {
+    if (!(await this.confirm.ask('Save customer details?', '', 'Save', false))) return;
     if (!this.form) return;
     const f = this.form;
     try {

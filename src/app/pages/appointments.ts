@@ -10,6 +10,7 @@ import { Appointment, Customer, CustomerPlan, PaymentMethod, STATUSES, Service, 
 import { WhenPicker } from '../shared/when-picker';
 import { today } from '../core/util';
 
+import { Confirm } from '../shared/confirm';
 @Component({
   selector: 'app-appointments', imports: [DayBoard, DurationPipe, SearchSelect, FormsModule, DecimalPipe, WhenPicker],
   styles: [`
@@ -226,6 +227,7 @@ import { today } from '../core/util';
   </div>`,
 })
 export class Appointments implements OnInit {
+  private confirm = inject(Confirm);
   tOpts = computed(() => therapistOptions(this.therapists()));
   private api = inject(Api);
   statuses = STATUSES;
@@ -386,6 +388,7 @@ export class Appointments implements OnInit {
     return !!a && Number(this.paymentAmount)>0 && Number(this.paymentAmount)<=Number(a.balance_due);
   }
   async savePayment() {
+    if (!(await this.confirm.ask('Record this payment?', '', 'Record payment', false))) return;
     const a=this.collecting(); if(!a || this.savingPayment()) return;
     if(!(Number(this.paymentAmount)>0) || Number(this.paymentAmount)>Number(a.balance_due)) {
       this.paymentError.set('Enter an amount greater than zero and no more than the outstanding balance.'); return;
@@ -417,6 +420,7 @@ export class Appointments implements OnInit {
 
   bookPlan: 'hours' | 'rupees' | null = null; bookHours: number | null = null;
   async save() {
+    if (!(await this.confirm.ask(this.editId() ? 'Save changes to this appointment?' : 'Book this appointment?', '', 'Yes, save', false))) return;
     try {
       if (!this.f.start_at) throw new Error('Pick a date and a time');
       if (!this.slotValid) throw new Error('Choose a free appointment time within the therapist\'s assigned shift.');
@@ -462,6 +466,7 @@ export class Appointments implements OnInit {
   }
 
   async setStatus(a: Appointment, status: Status) {
+    if (status !== 'completed' && !(await this.confirm.ask(`Mark ${a.customer}'s appointment as ${status.replace('_', '-')}?`, status === 'cancelled' || status === 'no_show' ? 'Any membership hours taken will be returned.' : '', 'Yes, change', status === 'cancelled' || status === 'no_show'))) return;
     if (status === 'completed') {
       await this.askCompletion(a);
       return;
@@ -486,6 +491,7 @@ export class Appointments implements OnInit {
   openFromBoard(id: number) { this.board.set(false); setTimeout(() => document.getElementById('appt-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })); }
   /** Give the hours / rupees back and leave the booking unpaid. */
   async dropPlan(a: Appointment) {
+    if (!(await this.confirm.ask('Remove the membership deduction?', 'The hours / rupees go back to the membership and the booking becomes unpaid.', 'Remove', true))) return;
     try { await this.api.delete('/appointments/' + a.id + '/plan'); this.say('Membership deduction removed; balance returned.'); await this.load(); }
     catch (e) { this.say(errorText(e), true); }
   }
@@ -529,6 +535,7 @@ export class Appointments implements OnInit {
   }
 
   async completeWith(type: 'hours' | 'rupees' | null) {
+    if (!(await this.confirm.ask(type ? `Deduct from the ${type} membership?` : 'Complete without using a membership?', '', 'Yes, continue', false))) return;
     const a = this.pendingCompletion();
     if (!a) return;
     if (type && !this.canDeduct(type, a)) return;

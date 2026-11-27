@@ -9,6 +9,7 @@ import { thisMonth, today } from '../core/util';
 interface Bonus { id: number; therapist_id: number; therapist: string; on_date: string; amount: number; note?: string; added_by?: string; }
 
 /** Extra incentives (bonus, extra hours, ...) for a therapist on a date; they are added to that month's payslip. */
+import { Confirm } from '../shared/confirm';
 @Component({
   selector: 'app-bonuses', imports: [SearchSelect, FormsModule, DecimalPipe],
   template: `
@@ -38,6 +39,7 @@ interface Bonus { id: number; therapist_id: number; therapist: string; on_date: 
   </div>`,
 })
 export class Bonuses implements OnInit {
+  private confirm = inject(Confirm);
   tOpts = computed(() => therapistOptions(this.therapists()));
   private api = inject(Api);
   therapists = input<Therapist[]>([]);
@@ -54,6 +56,7 @@ export class Bonuses implements OnInit {
   }
 
   async add() {
+    if (!(await this.confirm.ask('Add this extra incentive?', '', 'Add', false))) return;
     try {
       const tid = this.f.therapist_id ?? this.therapists().find((t) => t.is_active)?.id;
       if (!tid) throw new Error('Pick a therapist');
@@ -65,6 +68,7 @@ export class Bonuses implements OnInit {
   }
 
   async remove(b: Bonus) {
+    if (!(await this.confirm.ask('Delete this extra incentive?', '', 'Delete', true))) return;
     if (!confirm(`Remove Rs ${b.amount} for ${b.therapist} on ${b.on_date}?`)) return;
     try { await this.api.delete(`/bonuses/${b.id}`); await this.load(); } catch (e) { this.say(errorText(e), true); }
   }

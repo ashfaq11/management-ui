@@ -35,7 +35,7 @@ import { today } from '../core/util';
   <div class="card"><h2>{{ editId() ? "Edit appointment #" + editId() : "Book appointment" }}</h2>
     <div class="grid">
       <div><label>Search customer</label><input name="customerSearch" [ngModel]="customerSearch" (ngModelChange)="searchCustomers($event)" placeholder="Search by customer name or phone number">
-        <select name="c" [(ngModel)]="f.customer_id">
+        <select name="c" [ngModel]="f.customer_id" (ngModelChange)="pickCustomer($event)">
           @for (c of filteredCustomers(); track c.id) { <option [ngValue]="c.id">{{ c.name }} - {{ c.phone }}</option> }
           @empty { <option disabled [ngValue]="null">No matching customers</option> }
         </select>
@@ -226,13 +226,24 @@ export class Appointments implements OnInit {
     const sequence = ++this.customerSearchSequence;
     try {
       const matches = await this.api.get<Customer[]>('/customers', { q: value.trim() });
-      if (sequence === this.customerSearchSequence) this.customers.set(matches);
+      if (sequence === this.customerSearchSequence) {
+        this.customers.set(matches);
+        // keep the box and the selection in step: pick the first match when the old choice is not in the results
+        if (value.trim() && !matches.some((c) => c.id === this.f.customer_id)) this.f.customer_id = matches[0]?.id;
+      }
     } catch (e) {
       if (sequence === this.customerSearchSequence) {
         this.customers.set([]);
         this.say(errorText(e), true);
       }
     }
+  }
+
+  /** Choosing from the list fills the search box with that customer. */
+  pickCustomer(id: number) {
+    this.f.customer_id = id;
+    const c = this.customers().find((x) => x.id === id);
+    if (c) this.customerSearch = c.name;
   }
 
   filteredCustomers(): Customer[] {

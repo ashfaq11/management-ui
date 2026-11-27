@@ -22,6 +22,8 @@ type Row = (string | number | null)[];
       <div style="flex:0 0 200px"><label>Show</label><select [ngModel]="show()" (ngModelChange)="show.set($event)">
         <option value="all">All plans</option><option value="active">Active</option><option value="pending">Payment pending</option>
         <option value="ended">Expired / used up</option></select></div>
+      <div style="flex:0 0 auto;display:flex;gap:8px"><button class="p" style="margin:0" (click)="file('pdf')">Download PDF</button>
+        <button class="p" style="margin:0;background:var(--gold)" (click)="file('xlsx')">Export to Excel</button></div>
     </div>
     @if (err()) { <div class="msg err">{{ err() }}</div> }
     <div class="wrap" style="margin-top:10px"><table>
@@ -57,6 +59,12 @@ export class Members implements OnInit {
     return this.rows().filter((r) => (!q || `${r[0]} ${r[1]}`.toLowerCase().includes(q))
       && (f === 'all' || (f === 'pending' ? r[7] === 'Pending' : f === 'active' ? this.state(r) === 'active' : this.state(r) !== 'active')));
   });
+  async file(ext: 'pdf' | 'xlsx') {
+    try {
+      const res = await this.api.download(`/reports/insights/plans/${ext}?month=${new Date().toISOString().slice(0, 7)}`);
+      const a = document.createElement('a'); a.href = URL.createObjectURL(res.blob); a.download = res.name || `members.${ext}`; a.click();
+    } catch (e) { this.err.set(errorText(e)); }
+  }
   async ngOnInit() {
     try {
       const month = new Date().toISOString().slice(0, 7);

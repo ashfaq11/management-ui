@@ -15,7 +15,8 @@ interface Insight { title: string; columns: string[]; rows: (string | number | n
         <div style="flex:0 0 160px"><label>{{ kind === 'lapsed' ? 'Not seen for (days)' : 'Expiring within (days)' }}</label>
           <input type="number" min="1" max="365" [(ngModel)]="days" (change)="load()"></div>
       }
-      <div style="flex:0 0 auto"><button class="p" style="margin:0;background:var(--gold)" (click)="excel()">Export to Excel</button></div>
+      <div style="flex:0 0 auto;display:flex;gap:8px"><button class="p" style="margin:0" (click)="file('pdf')">Download PDF</button>
+        <button class="p" style="margin:0;background:var(--gold)" (click)="file('xlsx')">Export to Excel</button></div>
     </div>
     @if (err()) { <div class="msg err">{{ err() }}</div> }
     @if (data(); as d) {
@@ -55,10 +56,10 @@ export class Insights implements OnChanges {
     try { this.data.set(await this.api.get<Insight>(`/reports/insights/${this.kind}`, this.q())); this.err.set(''); }
     catch (e) { this.err.set(errorText(e)); }
   }
-  async excel() {
+  async file(ext: 'pdf' | 'xlsx') {
     try {
-      const res = await this.api.download(`/reports/insights/${this.kind}/xlsx?month=${this.month}&days=${this.days}`);
-      const a = document.createElement('a'); a.href = URL.createObjectURL(res.blob); a.download = res.name || `${this.kind}.xlsx`; a.click();
+      const res = await this.api.download(`/reports/insights/${this.kind}/${ext}?month=${this.month}&days=${this.days}`);
+      const a = document.createElement('a'); a.href = URL.createObjectURL(res.blob); a.download = res.name || `${this.kind}.${ext}`; a.click();
     } catch (e) { this.err.set(errorText(e)); }
   }
 }

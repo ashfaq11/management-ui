@@ -5,9 +5,10 @@ import { Router } from '@angular/router';
 import { Api, errorText } from '../core/api';
 import { Auth } from '../core/auth';
 import { Spa } from '../core/models';
+import { SpaProfileForm, blankProfile, profileBody, profileMissing } from '../shared/spa-profile-form';
 
 @Component({
-  selector: 'app-spas', imports: [FormsModule, DecimalPipe, DatePipe],
+  selector: 'app-spas', imports: [SpaProfileForm, FormsModule, DecimalPipe, DatePipe],
   styles: [`
     .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
     .grid-spas{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
@@ -43,9 +44,8 @@ import { Spa } from '../core/models';
       <div class="row">
         <div><label>Plan start</label><input type="date" [(ngModel)]="n.plan_start"></div>
         <div><label>Plan end (blank = no end)</label><input type="date" [(ngModel)]="n.plan_end"></div>
-        <div><label>Owner phone</label><input [(ngModel)]="n.contact_phone"></div>
-        <div><label>Owner email</label><input type="email" [(ngModel)]="n.contact_email"></div>
       </div>
+      <app-spa-profile-form [(profile)]="prof" />
       <button class="p" (click)="create()" [disabled]="busy()">Create spa</button>
     </div>
   }
@@ -109,7 +109,8 @@ export class Spas implements OnInit {
   spas = signal<Spa[]>([]); msg = signal(''); err = signal(false); busy = signal(false);
   showNew = signal(false); editId = signal<number | null>(null); editName = '';
   n = this.blankN();
-  blankN() { return { name: '', admin_username: '', admin_password: '', plan_start: new Date().toISOString().slice(0, 10), plan_end: '', contact_phone: '', contact_email: '' }; }
+  blankN() { return { name: '', admin_username: '', admin_password: '', plan_start: new Date().toISOString().slice(0, 10), plan_end: '' }; }
+  prof = blankProfile();
   planId = signal<number | null>(null);
   pf = { plan_start: '', plan_end: '', is_trial: false };
   pc = { renewal_name: '', renewal_phone: '', renewal_email: '', renewal_message: '', trial_days: 30, allow_signup: true };
@@ -152,8 +153,11 @@ export class Spas implements OnInit {
   async create() {
     this.busy.set(true);
     try {
-      await this.api.post('/spas', { ...this.n, name: this.n.name.trim(), admin_username: this.n.admin_username.trim(),
-        plan_start: this.n.plan_start || null, plan_end: this.n.plan_end || null, contact_phone: this.n.contact_phone || null, contact_email: this.n.contact_email || null });
+      const miss = profileMissing(this.prof);
+      if (miss.length) { this.say('Please fill: ' + miss.join(', '), true); this.busy.set(false); return; }
+      await this.api.post('/spas', { ...this.n, ...profileBody(this.prof), name: this.n.name.trim(), admin_username: this.n.admin_username.trim(),
+        plan_start: this.n.plan_start || null, plan_end: this.n.plan_end || null });
+      this.prof = blankProfile();
       this.say(`Created ${this.n.name.trim()} with admin ${this.n.admin_username.trim()}`);
       this.n = this.blankN(); this.showNew.set(false); await this.load();
     } catch (e) { this.say(errorText(e), true); }

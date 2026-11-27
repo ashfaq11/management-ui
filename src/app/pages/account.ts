@@ -3,9 +3,19 @@ import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
 import { Auth } from '../core/auth';
 
+import { SpaProfile, SpaProfileForm, blankProfile, profileBody, profileMissing } from '../shared/spa-profile-form';
 @Component({
-  selector: 'app-account', imports: [FormsModule],
+  selector: 'app-account', imports: [SpaProfileForm, FormsModule],
   template: `
+  @if (auth.isAdmin() && auth.hasSpa()) {
+    <section class="card" [class.pop]="!profileOk()" style="margin-bottom:16px">
+      <h2>Spa profile</h2>
+      <p class="hint">Details kept for audits. Fields marked * are required.{{ profileOk() ? '' : ' Please complete your spa profile.' }}</p>
+      <app-spa-profile-form [(profile)]="prof" />
+      <button class="p" (click)="saveProfile()">Save spa profile</button>
+      @if (pmsg()) { <div class="msg" [class.err]="perr()">{{ pmsg() }}</div> }
+    </section>
+  }
   @if (auth.isAdmin() && auth.hasSpa()) {
     <section class="card" style="max-width:520px;margin-bottom:16px">
       <h2>Receipt address</h2>
@@ -55,6 +65,19 @@ export class Account implements OnInit {
   private api = inject(Api);
   auth = inject(Auth);
   cur = ''; next = ''; again = ''; msg = signal(''); isErr = signal(false);
+  prof = blankProfile(); profileOk = signal(true); pmsg = signal(''); perr = signal(false);
+  async loadProfile() {
+    const r = await this.api.get<Record<string, unknown> & { complete: boolean }>('/spa/profile');
+    const b = blankProfile() as unknown as Record<string, unknown>;
+    for (const k of Object.keys(b)) if (r[k] !== null && r[k] !== undefined) b[k] = r[k];
+    this.prof = b as unknown as SpaProfile; this.profileOk.set(r.complete);
+  }
+  async saveProfile() {
+    const miss = profileMissing(this.prof);
+    if (miss.length) { this.perr.set(true); this.pmsg.set('Please fill: ' + miss.join(', ')); return; }
+    try { await this.api.put('/spa/profile', profileBody(this.prof)); this.perr.set(false); this.pmsg.set('Spa profile saved.'); this.profileOk.set(true); }
+    catch (e) { this.perr.set(true); this.pmsg.set(errorText(e)); }
+  }
   logoPreview = signal<string | null>(null);
   logoDirty = signal(false); logoBusy = signal(false);
   logoMsg = signal(''); logoErr = signal(false);
@@ -65,6 +88,7 @@ export class Account implements OnInit {
 
   async ngOnInit() {
     if (!this.auth.isAdmin() || !this.auth.hasSpa()) return;
+    void this.loadProfile().catch(() => undefined);
     try {
       const [logo, details] = await Promise.all([
         this.api.get<{ logo_data_url: string | null }>('/spa/logo'),

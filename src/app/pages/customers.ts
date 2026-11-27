@@ -32,7 +32,9 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
     <div class="wrap"><table><tr><th>Name</th><th>Phone</th><th>Email</th><th>Since</th><th></th></tr>
     @for (c of list(); track c.id) {
       <tr><td>{{ c.name }}</td><td>{{ c.phone }}</td><td>{{ c.email }}</td><td>{{ c.created_at.slice(0, 10) }}</td>
-        <td><button class="s" (click)="open(c.id)">History</button></td></tr>
+        <td style="white-space:nowrap"><button class="s" (click)="open(c.id)">History</button>
+          <button class="s" (click)="editFromList(c.id)">Edit</button>
+          @if (c.phone) { <a [href]="wa(c.phone, c.name)" target="_blank" rel="noopener"><button class="s" title="WhatsApp">WhatsApp</button></a> }</td></tr>
     } @empty { <tr><td colspan="5">No customers found. Try another name or phone number.</td></tr> }</table></div>
     <div class="customer-pager"><small>Showing {{ list().length ? (page()-1)*pageSize()+1 : 0 }}–{{ (page()-1)*pageSize()+list().length }} of {{ total() }}</small>
       <div style="display:flex;gap:8px"><button class="s" [disabled]="page()<=1" (click)="changePage(-1)">Previous</button>
@@ -92,7 +94,7 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
                 <div style="margin-top:4px"><span class="badge" style="background:var(--gold-soft);color:var(--gold)">Top-up pending{{ x.price_paid ? ' · ₹' + (+x.price_paid).toLocaleString('en-IN') : '' }}</span>
                 @if (true) { <select style="width:auto;min-height:30px;padding:2px 26px 2px 8px;margin-left:6px" [(ngModel)]="markVia"><option value="cash">Cash</option><option value="upi">UPI</option><option value="card">Card</option><option value="bank_transfer">Bank</option><option value="other">Other</option></select><button class="s" style="margin-left:6px" (click)="markTopupPaid(c.id, x.id)">Mark paid</button> }</div> }</td>
             @if (auth.isAdmin()) { <td style="white-space:nowrap"><button class="s" (click)="startPlan(p, 'topup')">Top up</button>
-              <button class="s" (click)="startPlan(p, 'edit')">Change expiry</button></td> }</tr>
+              <button class="s" (click)="startPlan(p, 'edit')">Edit</button></td> }</tr>
           @if (planEdit?.id === p.id) {
             <tr class="detail"><td colspan="8">
               @if (planEdit!.mode === 'topup') {
@@ -108,6 +110,7 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
               } @else {
                 <div class="row">
                   <div><label>Plan name</label><input [(ngModel)]="planEdit!.name"></div>
+                  <div><label>Balance left ({{ p.plan_type === 'hours' ? 'hours' : 'Rs' }})</label><input type="number" min="0" step="0.25" [(ngModel)]="planEdit!.balance"></div>
                   <div><label>Expiry date (blank = never)</label><input type="date" [(ngModel)]="planEdit!.expires_on"></div>
                   <div><label>Notes</label><input [(ngModel)]="planEdit!.notes"></div>
                 </div>
@@ -205,10 +208,10 @@ export class Customers implements OnInit {
       this.planErr.set(false); this.planMsg.set('Plan assigned.'); this.assign = { package_id: null, paid: 'cash' }; await this.open(cid);
     } catch (x) { this.planErr.set(true); this.planMsg.set(errorText(x)); }
   }
-  planEdit: { id: number; mode: 'edit' | 'topup'; plan_type: 'hours' | 'rupees'; name: string; expires_on: string; notes: string; amount: number | null; price_paid: number | null; paid: string; note: string } | null = null;
-  startPlan(p: { id: number; name: string; plan_type: 'hours' | 'rupees'; expires_on?: string | null; notes?: string | null }, mode: 'edit' | 'topup') {
+  planEdit: { id: number; mode: 'edit' | 'topup'; plan_type: 'hours' | 'rupees'; name: string; expires_on: string; notes: string; balance: number | null; amount: number | null; price_paid: number | null; paid: string; note: string } | null = null;
+  startPlan(p: { id: number; name: string; plan_type: 'hours' | 'rupees'; expires_on?: string | null; notes?: string | null; balance?: number }, mode: 'edit' | 'topup') {
     this.planMsg.set('');
-    this.planEdit = { id: p.id, mode, plan_type: p.plan_type, name: p.name, expires_on: p.expires_on ?? '', notes: p.notes ?? '', amount: null, price_paid: null, paid: 'cash', note: '' };
+    this.planEdit = { id: p.id, mode, plan_type: p.plan_type, name: p.name, expires_on: p.expires_on ?? '', notes: p.notes ?? '', balance: p.balance != null ? +p.balance : null, amount: null, price_paid: null, paid: 'cash', note: '' };
   }
   async markPaid(cid: number, pid: number) {
     if (!(await this.confirm.ask('Mark this membership as paid?', 'Paid by ' + this.markVia, 'Mark paid', false))) return;
@@ -230,7 +233,7 @@ export class Customers implements OnInit {
           price_paid: e.price_paid === null || String(e.price_paid) === '' ? null : Number(e.price_paid), ...this.payOf(e.paid) });
         this.planMsg.set('Top-up added.');
       } else {
-        await this.api.put(`/customers/${cid}/plans/${e.id}`, { name: e.name.trim(), expires_on: e.expires_on || null, notes: e.notes.trim() || null });
+        await this.api.put(`/customers/${cid}/plans/${e.id}`, { name: e.name.trim(), expires_on: e.expires_on || null, notes: e.notes.trim() || null, ...(e.balance != null && String(e.balance) !== '' ? { balance: Number(e.balance) } : {}) });
         this.planMsg.set('Plan updated.');
       }
       this.planErr.set(false); this.planEdit = null; await this.open(cid);
@@ -325,6 +328,8 @@ export class Customers implements OnInit {
       await this.open(id);
     } catch (e) { this.planErr.set(true); this.planMsg.set(errorText(e)); }
   }
+  async editFromList(id: number) { await this.open(id); const c = this.sel(); if (c) this.startEdit(c); }
+  wa(phone: string, name: string) { const n = phone.replace(/\D/g, ''); return `https://wa.me/${n.length === 10 ? '91' + n : n}?text=${encodeURIComponent('Hi ' + name + ', ')}`; }
   startEdit(c: Customer) {
     this.formErr.set('');
     this.form = { name: c.name, phone: c.phone, email: c.email ?? '', gender: c.gender ?? '', dob: c.dob ?? '',

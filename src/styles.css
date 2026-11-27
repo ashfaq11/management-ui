@@ -173,3 +173,19 @@ body.busy::before{content:'';position:fixed;z-index:9999;top:0;left:0;height:3px
 .rsub{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .rsub button{background:var(--bg);border:1px solid var(--line,#dde3ea);color:var(--ink);border-radius:999px;padding:6px 14px;font-size:13px}
 .rsub button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+/* data tables: sortable headers, sticky head, zebra rows, toolbar */
+.wrap{max-height:70vh;overflow:auto}
+.wrap table th{position:sticky;top:0;z-index:1;background:var(--card)}
+th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+th.sortable:hover{color:var(--acc)}
+th.sortable::after{content:'⇅';opacity:.3;margin-left:4px;font-size:.85em}
+th.sort-asc::after{content:'▲';opacity:1;color:var(--acc)}
+th.sort-desc::after{content:'▼';opacity:1;color:var(--acc)}
+.wrap table tr:nth-child(even) td{background:color-mix(in srgb,var(--bg) 55%,transparent)}
+.wrap table tr:hover td{background:var(--acc-soft)}
+.tbar{display:flex;align-items:center;gap:8px;margin:8px 0 6px;flex-wrap:wrap}
+.tbar .tsearch{max-width:220px;margin:0;padding:6px 10px}
+.tbar .tsp{flex:1}
+.tbar .tsize{width:auto;margin:0;padding:5px 8px}
+.tbar .tinfo{font-size:12px;color:var(--mut);min-width:90px;text-align:right}
+.tbar button{margin:0;padding:4px 10px}

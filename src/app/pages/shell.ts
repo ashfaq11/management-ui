@@ -1,3 +1,4 @@
+import { startTableEnhancer } from '../shared/table-enhance';
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Api } from '../core/api';
@@ -128,6 +129,7 @@ export class Shell implements OnInit {
     effect(() => { if (this.auth.isSuper() && !this.auth.pick() && (this.router.url === '/appointments' || this.router.url === '/dashboard')) this.router.navigateByUrl('/spas'); });
   }
   async ngOnInit() {
+    startTableEnhancer();
     if (this.auth.isSuper()) this.spas.set(await this.api.get<Spa[]>('/spas'));
     if (this.auth.hasSpa()) {
       try { this.auth.spaLogo.set((await this.api.get<{ logo_data_url: string | null }>('/spa/logo')).logo_data_url); }

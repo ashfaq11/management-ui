@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { Api, errorText } from '../core/api';
 import { Service, Shift, ShiftAssignment, Therapist } from '../core/models';
 import { Bonuses } from './bonuses';
@@ -25,7 +26,8 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
     .shift-empty{padding:16px;border:1px dashed var(--line);border-radius:12px;color:var(--mut);background:var(--bg)}
   `],
   template: `
-  <div class="page-head"><div><h1>Therapists &amp; services</h1><p>Your team, their profiles, and the treatments you offer.</p></div></div>
+  @if (!svc) {
+  <div class="page-head"><div><h1>Therapists</h1><p>Your team, their profiles, shifts and extra incentives.</p></div></div>
   <div class="card"><h2>Therapists</h2>
     <div class="wrap"><table><tr><th>Name</th><th>Phone</th><th>Specialities</th><th class="num">Fixed salary</th><th class="num">Incentive %</th><th>Active</th><th></th></tr>
     @for (t of therapists(); track t.id) {
@@ -136,6 +138,8 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
       </table></div>
     } @else { <div class="shift-empty">No weekly assignments yet. Therapists without a roster retain the default 09:00–21:00 booking window.</div> }
   </div>
+  } @else {
+  <div class="page-head"><div><h1>Services</h1><p>The treatments you offer, with price and duration.</p></div></div>
   <div class="card"><h2>Services</h2>
     <div class="wrap"><table><tr><th>Name</th><th class="num">Price</th><th class="num">Minutes</th><th>Active</th><th></th></tr>
     @for (x of services(); track x.id) {
@@ -155,10 +159,13 @@ const blankS = () => ({ name: '', price: 0, duration_min: 60 });
     @if (sId()) { <button class="s" style="margin-left:8px" (click)="resetS()">Cancel</button> }
     @if (sm()) { <div class="msg err">{{ sm() }}</div> }
   </div>
-  <app-bonuses [therapists]="therapists()" />`,
+  }
+  @if (!svc) { <app-bonuses [therapists]="therapists()" /> }`,
 })
 export class Staff implements OnInit {
   private api = inject(Api);
+  /** /services shows only the services card; /staff the therapists side. */
+  svc = inject(ActivatedRoute).snapshot.data['section'] === 'services';
   therapists = signal<Therapist[]>([]); services = signal<Service[]>([]);
   shifts = signal<Shift[]>([]); assignments = signal<ShiftAssignment[]>([]);
   shiftId = signal<number | null>(null);

@@ -51,6 +51,22 @@ import { DashboardData } from '../core/models';
         }
       </div>
     </section>
+    <section class="card">
+      <h2>Today's shift</h2>
+      @if (d.today_shifts?.length) {
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">
+          @for (x of d.today_shifts; track x.therapist_id) {
+            <div style="border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center">
+              <span style="width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;flex:none"
+                [style.background]="x.on_duty ? 'var(--ok)' : 'var(--mut)'">{{ x.therapist.charAt(0).toUpperCase() }}</span>
+              <div style="min-width:0;flex:1"><b>{{ x.therapist }}</b>
+                <small style="display:block;color:var(--mut)">{{ x.shift }} · {{ x.start_time }}–{{ x.end_time }} · {{ x.bookings }} booked</small></div>
+              <span class="badge" [style.background]="x.on_duty ? 'var(--ok-soft)' : 'var(--bg)'" [style.color]="x.on_duty ? 'var(--ok)' : 'var(--mut)'">{{ x.on_duty ? 'On duty' : 'Off now' }}</span>
+            </div>
+          }
+        </div>
+      } @else { <p class="hint">No shifts assigned for today. Set them under Shifts.</p> }
+    </section>
     <div class="dash-columns">
       <section class="card">
         <h2>Upcoming today</h2>

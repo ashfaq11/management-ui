@@ -36,6 +36,7 @@ export interface DashboardData {
   customers_today: number; total_customers: number; therapists_on_shift: number;
   monthly: { month: string; completed: number; revenue: number; new_customers: number }[];
   upcoming: Appointment[];
+  today_shifts?: { therapist_id: number; therapist: string; phone?: string; shift: string; start_time: string; end_time: string; on_duty: boolean; bookings: number }[];
 }
 export interface PaymentReport {
   date: string; gross: number; refunds: number; net: number;

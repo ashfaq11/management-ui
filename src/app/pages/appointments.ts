@@ -213,7 +213,7 @@ import { Confirm } from '../shared/confirm';
                 [class.pay-partial]="paymentState(a)==='partial'" [class.pay-paid]="paymentState(a)==='paid'"
                 [class.pay-prepaid]="paymentState(a)==='prepaid'">{{ paymentLabel(a) }}</span></td>
               <td><select #st [ngModel]="a.status" (ngModelChange)="setStatus(a, $event, st)">
-                @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }</select></td>
+                @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }</select> @if (auth.isAdmin()) { <a [href]="'/audit?ref=appointment:' + a.id" title="Change history" style="font-size:11px;margin-left:4px">history</a> }</td>
               <td style="white-space:nowrap">
                 @if (a.status === 'booked' && a.phone) { <a [href]="wa(a)" target="_blank" rel="noopener" title="Send WhatsApp reminder"
                   style="display:inline-block;padding:4px 10px;border-radius:8px;background:#25d366;color:#fff;font-size:12.5px;font-weight:600;text-decoration:none;margin-right:4px">WhatsApp</a> }

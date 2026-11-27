@@ -37,7 +37,8 @@ import { Confirm } from '../shared/confirm';
       <tr [class.open]="viewId() === t.id"><td><button class="link" (click)="viewId.set(viewId() === t.id ? null : t.id)">{{ t.name }}</button></td>
         <td>{{ t.phone }}</td><td>{{ t.specialities }}</td>
         <td class="num">{{ t.fixed_salary | number: '1.2-2' }}</td><td class="num">{{ t.incentive_percent }}</td>
-        <td><input type="checkbox" style="width:auto" #tc [checked]="!!t.is_active" (change)="toggleT(t, tc)"></td>
+        <td><input type="checkbox" style="width:auto" #tc [checked]="!!t.is_active" (change)="toggleT(t, tc)">
+          <a [href]="'/audit?ref=therapist:' + t.id" title="Change history" style="margin-left:6px;font-size:12px">history</a></td>
         <td><button class="s" (click)="editT(t)">Edit</button></td></tr>
       @if (viewId() === t.id) {
         <tr class="detail"><td colspan="7"><div class="dl">

@@ -66,6 +66,7 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
           <h2 style="margin:0;flex:1">{{ c.name }}</h2>
           <a routerLink="/appointments"><button class="p" style="margin:0">Book appointment</button></a>
           <button class="s" (click)="startEdit(c)">Edit customer details</button>
+          @if (auth.isAdmin()) { <a [href]="'/audit?ref=customer:' + c.id"><button class="s">Change history</button></a> }
         </div>
         <div class="profile-grid">
           <div class="profile-fact"><span>Phone</span><strong>{{ c.phone }}</strong></div>

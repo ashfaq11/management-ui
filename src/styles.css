@@ -189,3 +189,22 @@ th.sort-desc::after{content:'▼';opacity:1;color:var(--acc)}
 .tbar .tsize{width:auto;margin:0;padding:5px 8px}
 .tbar .tinfo{font-size:12px;color:var(--mut);min-width:90px;text-align:right}
 .tbar button{margin:0;padding:4px 10px}
+.glance{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin:8px 0 16px}
+.glance>div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.glance span{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);font-weight:600}
+.glance b{font-size:22px;line-height:1.2}
+.glance small{color:var(--mut);font-size:12px}
+/* phones: tables become cards */
+@media (max-width: 700px){
+  .wrap{max-height:none;overflow:visible}
+  table.cardable, table.cardable tbody{display:block;width:100%;border:0}
+  table.cardable tr:first-child:has(th):not(:has(td)){display:none}
+  table.cardable tr{display:block;border:1px solid var(--line);border-radius:12px;margin:0 0 10px;padding:8px 12px;background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  table.cardable tr td, table.cardable tr th{display:flex;justify-content:space-between;align-items:center;gap:12px;border:0;padding:5px 0;text-align:right;background:none !important;position:static}
+  table.cardable td[data-label]:not([data-label=""])::before{content:attr(data-label);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:600;text-align:left;flex:0 0 auto}
+  table.cardable td:first-child{font-weight:650;font-size:15px;border-bottom:1px solid var(--line);padding-bottom:7px;margin-bottom:3px}
+  table.cardable td:first-child::before{display:none}
+  table.cardable td:empty{display:none}
+  table.cardable td select, table.cardable td input{max-width:60%}
+  .tbar .tsearch{max-width:none;flex:1 1 100%}
+}

@@ -90,12 +90,30 @@ function enhance(table: HTMLTableElement) {
   apply(table);
 }
 
+/** Phone card view: each cell carries its column name, shown by CSS on small screens. */
+function label(table: HTMLTableElement) {
+  const { head } = parts(table);
+  if (!head) return;
+  const names = Array.from(head.cells).map((c) => c.innerText.replace(/[⇅▲▼]/g, '').trim());
+  table.classList.add('cardable');
+  for (const r of Array.from(table.rows)) {
+    if (r === head) continue;
+    let col = 0;
+    for (const c of Array.from(r.cells)) {
+      const n = names[col] ?? '';
+      if (c.getAttribute('data-label') !== n) c.setAttribute('data-label', n);
+      col += c.colSpan || 1;
+    }
+  }
+}
+
 let timer: ReturnType<typeof setTimeout> | undefined;
 let busy = false;
 export function startTableEnhancer(root: HTMLElement = document.body) {
   const run = () => {
     busy = true;
     root.querySelectorAll<HTMLTableElement>('.wrap > table, table.enh').forEach(enhance);
+    root.querySelectorAll<HTMLTableElement>('.wrap > table').forEach(label);
     // the bar of a table Angular removed goes with it
     root.querySelectorAll<HTMLElement>('.tbar').forEach((b) => { if (!b.nextElementSibling?.querySelector?.('table') && b.nextElementSibling?.tagName !== 'TABLE') b.remove(); });
     setTimeout(() => (busy = false));

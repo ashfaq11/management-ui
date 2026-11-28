@@ -91,7 +91,8 @@ interface ShiftReport {
     @if (filtered()) { <button class="s" style="margin-top:14px" (click)="clear()">Clear filters</button> }
   </div>
   @if (err()) { <div class="msg err">{{ err() }}</div> }
-  @if (tab === 'revenue' && sum(); as s) {
+  @if ((tab === 'revenue' || tab === 'visits') && sum(); as s) {
+    @if (tab === 'revenue') {
     <div class="figs">
       <div class="fig teal"><i class="ic">&#8377;</i><span>Service revenue</span><b>{{ inr(s.revenue) }}</b>
         <small>completed services</small></div>
@@ -102,6 +103,18 @@ interface ShiftReport {
       @if (!filtered()) { <div class="fig amber"><i class="ic">&#9733;</i><span>New customers</span><b>{{ s.new_customers }}</b>
         <small>joined this period</small></div> }
     </div>
+    @if (ov(); as o) {
+      <h3>At a glance <small style="color:var(--mut);font-weight:500">counts only · open Detailed tabs for names</small></h3>
+      <div class="glance">
+        <div><span>Bookings</span><b>{{ o.bookings.total }}</b><small>{{ o.bookings.completed }} done · {{ o.bookings.booked }} upcoming · {{ o.bookings.cancelled }} cancelled · {{ o.bookings.no_show }} no-show</small></div>
+        <div><span>Service hours</span><b>{{ +o.bookings.hours | number: '1.0-1' }}</b><small>{{ o.bookings.customers }} customers served</small></div>
+        <div><span>Customers</span><b>{{ o.customers.new_visitors + o.customers.returning_visitors }}</b><small>{{ o.customers.new_visitors }} new · {{ o.customers.returning_visitors }} returning · {{ o.customers.signed_up }} signed up</small></div>
+        <div><span>Memberships</span><b>{{ o.memberships.active }} active</b><small>{{ o.memberships.sold }} sold · {{ o.memberships.expiring_week }} expiring this week · {{ o.memberships.unpaid }} unpaid</small></div>
+        <div><span>Membership hours used</span><b>{{ +o.memberships.hours_used | number: '1.0-2' }}</b><small>in this period</small></div>
+        <div><span>Busiest</span><b>{{ o.busiest_day?.d || '—' }}</b><small>{{ o.busiest_hour ? 'around ' + hr(o.busiest_hour.h) : 'no bookings yet' }} · {{ o.therapists_active }} active therapists</small></div>
+      </div>
+    }
+    }
 
     @if (s.by_method?.length) {
       <div class="breakup">@for (m of s.by_method; track m.method) {
@@ -147,6 +160,7 @@ interface ShiftReport {
         @if (s.paid_by_plan) { <tr><td>Membership plan (no new money)</td><td class="num">{{ inr(s.paid_by_plan) }}</td><td></td><td></td><td class="num">—</td></tr> }
       </table></div>
     }
+    @if (tab === 'visits') {
     @if (s.plan_lines?.length) {
       <h3>Plan sales ({{ s.plan_lines!.length }})</h3>
       <div class="wrap"><table><tr><th>Date</th><th>Customer</th><th>Plan</th><th>Kind</th><th class="num">Amount</th><th class="num">Paid</th></tr>
@@ -157,7 +171,9 @@ interface ShiftReport {
       <tr><th colspan="5">Total</th><th class="num">{{ s.plan_sales | number: '1.2-2' }}</th></tr></table></div>
       <p class="hint">Money collected = service revenue &minus; services paid from plans + plan sales. Net profit = money collected &minus; payroll &minus; expenses.</p>
     }
+    }
 
+    @if (tab === 'revenue') {
     <h3>By service</h3>
     <div class="wrap"><table><tr><th>Service</th><th class="num">Done</th><th class="num">Time</th><th class="num">Revenue</th></tr>
     @for (x of s.by_service; track x.service) {
@@ -165,7 +181,9 @@ interface ShiftReport {
     } @empty { <tr><td colspan="4">No completed services this month</td></tr> }
     </table></div>
 
-    <details class="sec"><summary>By therapist <small>services and amount per therapist</small></summary><div class="body">
+    }
+    @if (tab === 'visits') {
+    <details class="sec" open><summary>By therapist <small>services and amount per therapist</small></summary><div class="body">
     <div class="wrap"><table><tr><th>Therapist / service</th><th class="num">Done</th><th class="num">Time</th><th class="num">Amount</th></tr>
     @for (t of s.by_therapist; track t.therapist_id) {
       <tr style="font-weight:700;background:var(--acc-soft)"><td>{{ t.therapist }}</td><td class="num">{{ t.count }}</td><td class="num">{{ hrs(t.minutes) }}</td>
@@ -178,7 +196,7 @@ interface ShiftReport {
     </table></div>
 
     </div></details>
-    <details class="sec"><summary>All services done ({{ s.lines.length }}) <small>every visit with customer and therapist</small></summary><div class="body">
+    <details class="sec" open><summary>All services done ({{ s.lines.length }}) <small>every visit with customer and therapist</small></summary><div class="body">
     <div class="wrap"><table><tr><th>Date</th><th>Customer</th><th>Service</th><th>Therapist</th><th>Duration</th><th>Paid via</th><th class="num">Price</th></tr>
     @for (x of s.lines; track x.id) {
       <tr><td>{{ when(x.start_at) }}</td><td>{{ x.customer }}</td><td>{{ x.service }}</td><td>{{ x.therapist }}</td><td>{{ x.duration_min | dur }}</td><td>{{ via(x.paid_via) }}</td>
@@ -188,6 +206,7 @@ interface ShiftReport {
       <tr><th colspan="4">Total</th><th>{{ s.minutes | dur }}</th><th></th><th class="num">{{ s.revenue | number: '1.2-2' }}</th></tr>
     }
     </table></div></div></details>
+    }
   }
   @if (tab === 'musage' && planReport(); as p) {
     <h2 style="margin-top:22px">Membership reporting</h2>
@@ -279,13 +298,15 @@ export class Reports implements OnInit {
   tab = 'revenue';
   groups: { name: string; tabs: [string, string][] }[] = [
     { name: 'Overview', tabs: [['revenue', 'Summary'], ['daily', 'Daily closing'], ['monthly', 'Monthly closing']] },
-    { name: 'Sales', tabs: [['payments', 'Payments'], ['dues', 'Pending dues'], ['busy', 'Busy hours']] },
+    { name: 'Sales', tabs: [['visits', 'All visits'], ['payments', 'Payments'], ['dues', 'Pending dues'], ['busy', 'Busy hours']] },
     { name: 'Staff', tabs: [['therapists', 'Performance'], ['utilisation', 'Utilisation'], ['shifts', 'Shifts'], ['incentives', 'Incentives']] },
     { name: 'Clients', tabs: [['customers', 'Top customers'], ['repeat', 'Repeat customers'], ['lapsed', 'Not seen lately'], ['cancellations', 'Cancellations']] },
     { name: 'Memberships', tabs: [['plans', 'All memberships'], ['musage', 'Sold & used'], ['expiring', 'Expiring soon']] },
     { name: 'Expenses', tabs: [['expenses', 'By type']] },
   ];
-  isLocal() { return ['revenue', 'musage', 'shifts', 'incentives'].includes(this.tab); }
+  isLocal() { return ['revenue', 'visits', 'musage', 'shifts', 'incentives'].includes(this.tab); }
+  ov = signal<any>(null);
+  hr(h: number) { return `${h % 12 || 12} ${h < 12 ? 'am' : 'pm'}`; }
   group() { return this.groups.find((g) => g.tabs.some((t) => t[0] === this.tab)) ?? this.groups[0]; }
   private api = inject(Api);
   mode: 'month' | 'range' = 'month'; from = thisMonth() + '-01'; to = today();
@@ -307,6 +328,7 @@ export class Reports implements OnInit {
 
   async load() {
     if (this.mode === 'month' ? !this.month : !(this.from && this.to)) return;
+    this.api.get<any>('/reports/overview', this.period()).then((o) => this.ov.set(o)).catch(() => this.ov.set(null));
     try {
       const [s, i, p] = await Promise.all([
         this.api.get<Summary>('/reports/summary', this.query()),

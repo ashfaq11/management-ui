@@ -87,8 +87,10 @@ import { Confirm } from '../shared/confirm';
         }
       }
     </div>
+    @if (auth.isAdmin()) { <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" style="width:auto" [(ngModel)]="pastEntry">
+      Past visit (enter an earlier appointment from old records — then mark it Completed)</label> }
     <app-when-picker [(value)]="f.start_at" [(selectionValid)]="slotValid"
-      [therapistId]="f.therapist_id" [durationMin]="duration()" [excludeId]="editId()" />
+      [therapistId]="f.therapist_id" [durationMin]="duration()" [excludeId]="editId()" [allowPast]="pastEntry" />
     <button class="p" style="margin-top:10px" [disabled]="!slotValid" (click)="save()">{{ editId() ? "Save changes" : "Book" }}</button>
     @if (editId()) { <button class="s" style="margin-left:8px" (click)="cancelEdit()">Cancel</button> }
     @if (msg()) { <div class="msg" [class.err]="isErr()">{{ msg() }}</div> }
@@ -562,6 +564,7 @@ export class Appointments implements OnInit {
 
   deductHours: number | null = null;
   hoursNeeded(a: Appointment) { return Math.round((Number(a.duration_min) / 60) * 100) / 100; }
+  pastEntry = false;
   discType: 'none' | 'amount' | 'percent' = 'none'; discValue: number | null = null;
   listPrice() { const v = this.f.price; return v !== null && String(v) !== '' ? Number(v) : Number(this.services().find((x) => x.id === this.f.service_id)?.price ?? 0); }
   finalPrice() {

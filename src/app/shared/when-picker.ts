@@ -24,7 +24,7 @@ const mins = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
   <label>Date</label>
   <div style="display:flex;gap:4px">
     <button type="button" class="s" (click)="shift(-1)" aria-label="Previous day">&lsaquo;</button>
-    <input type="date" [min]="minDate()" [ngModel]="date()" (ngModelChange)="setDate($event)" style="flex:1;min-width:0">
+    <input type="date" [min]="allowPast() ? '' : minDate()" [ngModel]="date()" (ngModelChange)="setDate($event)" style="flex:1;min-width:0">
     <button type="button" class="s" (click)="shift(1)" aria-label="Next day">&rsaquo;</button>
   </div>
   <label style="margin-top:8px">Time</label>
@@ -79,6 +79,8 @@ export class WhenPicker {
   durationMin = input(60);
   /** The appointment being edited: its own slot is not counted as taken. */
   excludeId = input<number | null>(null);
+  /** Admin entering an earlier visit: earlier days and times are allowed. */
+  allowPast = input(false);
 
   date = signal(today());
   time = signal('');
@@ -148,7 +150,7 @@ export class WhenPicker {
     const d = new Date(this.date() + 'T12:00:00');
     d.setDate(d.getDate() + days);
     const next = d.toISOString().slice(0, 10);
-    if (next >= this.minDate()) this.setDate(next);
+    if (this.allowPast() || next >= this.minDate()) this.setDate(next);
   }
 
   retry() { void this.fetch(this.date(), this.therapistId(), this.excludeId()); }
@@ -259,7 +261,7 @@ export class WhenPicker {
     }
 
     const now = new Date();
-    const currentMinutes = this.date() === today() ? now.getHours() * 60 + now.getMinutes() : -1;
+    const currentMinutes = !this.allowPast() && this.date() === today() ? now.getHours() * 60 + now.getMinutes() : -1;
     if (from < currentMinutes) return 'Choose a future start time.';
 
     if (this.busy.some((b) => from < b.to && b.from < finish)) {
@@ -291,7 +293,7 @@ export class WhenPicker {
 
     const len = this.durationMin() || 60;
     const now = new Date();
-    const past = this.date() === today() ? now.getHours() * 60 + now.getMinutes() : -1;
+    const past = !this.allowPast() && this.date() === today() ? now.getHours() * 60 + now.getMinutes() : -1;
     const out: { t: string }[] = [];
     for (let m = window.start; m + len <= window.end; m += STEP) {
       if (m < past) continue;

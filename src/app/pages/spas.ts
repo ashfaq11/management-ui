@@ -40,7 +40,7 @@ import { Confirm } from '../shared/confirm';
       <div class="row">
         <div><label>Spa name</label><input [(ngModel)]="n.name" placeholder="e.g. Lotus Wellness"></div>
         <div><label>Admin username</label><input [(ngModel)]="n.admin_username" autocomplete="off"></div>
-        <div><label>Admin password (8+)</label><input type="password" autocomplete="new-password" [(ngModel)]="n.admin_password"></div>
+        <div><label>Admin password (8+, letters &amp; numbers)</label><input type="password" autocomplete="new-password" [(ngModel)]="n.admin_password"></div>
       </div>
       <div class="row">
         <div><label>Plan start</label><input type="date" [(ngModel)]="n.plan_start"></div>

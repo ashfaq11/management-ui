@@ -24,7 +24,7 @@ import { Confirm } from '../shared/confirm';
               #ac (change)="update(u, u.role, !u.is_active, ac)"></td>
         <td>
           @if (resetId() === u.id) {
-            <input type="password" placeholder="New password (8+)" style="width:170px" [(ngModel)]="newPw">
+            <input type="password" placeholder="New password (8+, letters &amp; numbers)" style="width:170px" [(ngModel)]="newPw">
             <button class="s" (click)="reset(u)">Set</button> <button class="s" (click)="resetId.set(null)">Cancel</button>
           } @else if (canChange(u)) { <button class="s" (click)="startReset(u)">Reset password</button> }
         </td></tr>
@@ -36,7 +36,7 @@ import { Confirm } from '../shared/confirm';
   <div class="card"><h2>Add user</h2>
     <div class="row">
       <div><label>Username (3+)</label><input name="nu" autocomplete="off" [(ngModel)]="nu"></div>
-      <div><label>Password (8+)</label><input type="password" name="np" autocomplete="new-password" [(ngModel)]="np"></div>
+      <div><label>Password (8+, letters &amp; numbers)</label><input type="password" name="np" autocomplete="new-password" [(ngModel)]="np"></div>
       @if (auth.isSuper()) {
         <div><label>Role</label><select [(ngModel)]="nr"><option value="staff">staff</option><option value="admin">admin</option>
           <option value="superadmin">superadmin</option></select></div>

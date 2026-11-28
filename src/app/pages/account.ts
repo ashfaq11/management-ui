@@ -67,7 +67,7 @@ import { SpaProfile, SpaProfileForm, blankProfile, profileBody, profileMissing }
     <h2>Change my password</h2>
     <p style="margin:0;color:var(--mut)">Signed in as {{ auth.me()?.username }}</p>
     <label>Current password</label><input type="password" name="c" autocomplete="current-password" [(ngModel)]="cur">
-    <label>New password (8+ characters)</label><input type="password" name="n" autocomplete="new-password" [(ngModel)]="next">
+    <label>New password (8+ characters, letters and numbers)</label><input type="password" name="n" autocomplete="new-password" [(ngModel)]="next">
     <label>Repeat new password</label><input type="password" name="r" autocomplete="new-password" [(ngModel)]="again">
     <button class="p">Change password</button>
     @if (msg()) { <div class="msg" [class.err]="isErr()">{{ msg() }}</div> }

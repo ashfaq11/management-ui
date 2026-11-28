@@ -56,6 +56,10 @@ import { Confirm } from '../shared/confirm';
       <div><label>Service</label><select [(ngModel)]="f.service_id">
         @for (s of services(); track s.id) { <option [ngValue]="s.id">{{ s.name }} · {{ s.duration_min }} min · ₹{{ s.price }}</option> }</select></div>
       <div><label>{{ editId() ? "Price (blank = keep, or list price if service changed)" : "Price override (optional)" }}</label><input type="number" min="0" [(ngModel)]="f.price"></div>
+      <div><label>Discount</label><div style="display:flex;gap:6px">
+        <select style="flex:0 0 90px" [(ngModel)]="discType"><option value="none">None</option><option value="amount">₹ off</option><option value="percent">% off</option></select>
+        @if (discType !== 'none') { <input type="number" min="0" [max]="discType === 'percent' ? 100 : null" [(ngModel)]="discValue" [placeholder]="discType === 'percent' ? 'e.g. 10' : 'e.g. 200'"> }</div>
+        @if (discType !== 'none' && discValue) { <small>Pay ₹{{ finalPrice() | number: '1.0-2' }} (₹{{ listPrice() - finalPrice() | number: '1.0-2' }} off ₹{{ listPrice() | number: '1.0-2' }})</small> }</div>
       <div><label>Duration (min) &middot; blank = {{ editId() ? "keep" : "service default " + serviceMinutes() }}</label>
         <input type="number" min="5" max="720" step="5" [(ngModel)]="f.duration_min" (ngModelChange)="bookHours = null"
           [placeholder]="'' + serviceMinutes()">
@@ -208,7 +212,7 @@ import { Confirm } from '../shared/confirm';
           <table><tr><th>Time</th><th>Customer</th><th>Therapist</th><th>Service</th><th>Duration</th><th class="num">Price</th><th class="num">Paid</th><th class="num">Due</th><th>Payment status</th><th>Appointment status</th><th>Actions</th></tr>
           @for (a of rows(); track a.id) {
             <tr [id]="'appt-' + a.id"><td>{{ a.start_at | dt: 't' }}</td><td>{{ a.customer }}<br><small>{{ a.phone }}</small></td>
-              <td>{{ a.therapist }}</td><td>{{ a.service }}</td><td>{{ a.duration_min | dur }}</td><td class="num">{{ a.price | number:'1.2-2' }}</td>
+              <td>{{ a.therapist }}</td><td>{{ a.service }}</td><td>{{ a.duration_min | dur }}</td><td class="num">{{ a.price | number:'1.2-2' }}@if ($any(a).discount > 0) {<br><small style="color:var(--mut)">−₹{{ +$any(a).discount }}{{ $any(a).discount_type === 'percent' ? ' (' + (+$any(a).discount_value) + '%)' : '' }}</small>}</td>
               <td class="num">{{ a.paid_amount || 0 | number:'1.2-2' }}</td><td class="num"><strong>{{ a.balance_due || 0 | number:'1.2-2' }}</strong></td>
               <td><span class="pay-state" [class.pay-pending]="paymentState(a)==='pending'"
                 [class.pay-partial]="paymentState(a)==='partial'" [class.pay-paid]="paymentState(a)==='paid'"
@@ -452,6 +456,8 @@ export class Appointments implements OnInit {
       if (!this.slotValid) throw new Error('Choose a free appointment time within the therapist\'s assigned shift.');
       const body: Record<string, unknown> = { ...this.f };
       if (body['price'] === null || body['price'] === '') delete body['price'];
+      if (this.discType !== 'none' && Number(this.discValue) > 0) { body['discount_type'] = this.discType; body['discount_value'] = Number(this.discValue); }
+      else if (this.editId() || this.discType === 'none') body['discount_type'] = this.editId() ? 'none' : undefined;
       if (!body['duration_min']) delete body['duration_min'];
       if (!body['notes']) body['notes'] = null;
       const id = this.editId();
@@ -480,6 +486,7 @@ export class Appointments implements OnInit {
     this.slotValid = false;
     this.f = { customer_id: a.customer_id, therapist_id: a.therapist_id, service_id: a.service_id,
       start_at: a.start_at, price: null, duration_min: a.duration_min, notes: a.notes ?? null };
+    const x = a as any; this.discType = x.discount_type ?? 'none'; this.discValue = x.discount_value != null ? +x.discount_value : null;
     this.msg.set('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -488,6 +495,7 @@ export class Appointments implements OnInit {
     this.editId.set(null);
     this.slotValid = false;
     this.f = { ...this.f, customer_id: undefined, start_at: '', price: null, duration_min: null, notes: null };
+    this.discType = 'none'; this.discValue = null;
     this.customerSearch = '';
   }
 
@@ -554,6 +562,12 @@ export class Appointments implements OnInit {
 
   deductHours: number | null = null;
   hoursNeeded(a: Appointment) { return Math.round((Number(a.duration_min) / 60) * 100) / 100; }
+  discType: 'none' | 'amount' | 'percent' = 'none'; discValue: number | null = null;
+  listPrice() { const v = this.f.price; return v !== null && String(v) !== '' ? Number(v) : Number(this.services().find((x) => x.id === this.f.service_id)?.price ?? 0); }
+  finalPrice() {
+    const b = this.listPrice(), v = Number(this.discValue) || 0;
+    return Math.max(0, Math.round((b - Math.min(b, this.discType === 'percent' ? b * Math.min(v, 100) / 100 : v)) * 100) / 100);
+  }
   rupeesNeeded(a: Appointment) { return Math.round(Number(a.price) * 100) / 100; }
 
   canDeduct(type: 'hours' | 'rupees', a: Appointment) {

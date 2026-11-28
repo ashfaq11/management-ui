@@ -280,7 +280,7 @@ export class Reports implements OnInit {
     { name: 'Overview', tabs: [['revenue', 'Summary'], ['daily', 'Daily closing'], ['monthly', 'Monthly closing']] },
     { name: 'Sales', tabs: [['payments', 'Payments'], ['dues', 'Pending dues'], ['busy', 'Busy hours']] },
     { name: 'Staff', tabs: [['therapists', 'Performance'], ['utilisation', 'Utilisation'], ['shifts', 'Shifts'], ['incentives', 'Incentives']] },
-    { name: 'Clients', tabs: [['customers', 'Top customers'], ['lapsed', 'Not seen lately'], ['cancellations', 'Cancellations']] },
+    { name: 'Clients', tabs: [['customers', 'Top customers'], ['repeat', 'Repeat customers'], ['lapsed', 'Not seen lately'], ['cancellations', 'Cancellations']] },
     { name: 'Memberships', tabs: [['plans', 'All memberships'], ['musage', 'Sold & used'], ['expiring', 'Expiring soon']] },
     { name: 'Expenses', tabs: [['expenses', 'By type']] },
   ];

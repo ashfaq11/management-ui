@@ -1,4 +1,5 @@
 import { DecimalPipe } from '@angular/common';
+import { DtPipe } from '../shared/dt.pipe';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Api, errorText } from '../core/api';
@@ -8,7 +9,7 @@ import { TodayBookings } from '../shared/today-bookings';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [DecimalPipe, RouterLink, TodayBookings],
+  imports: [DtPipe, DecimalPipe, RouterLink, TodayBookings],
   styles: [`
     :host{display:block;--dash-radius:18px}
     .welcome{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:18px;
@@ -198,7 +199,7 @@ import { TodayBookings } from '../shared/today-bookings';
             <div class="appointments">
               @for (a of d.upcoming; track a.id) {
                 <div class="appt">
-                  <span class="appt-time">{{ a.start_at | sliceTime }}</span>
+                  <span class="appt-time">{{ a.start_at | dt: 't' }}</span>
                   <div class="appt-main"><b>{{ a.customer }}</b><small>{{ a.service }} · {{ a.therapist }} · {{ a.duration_min }} min</small></div>
                   <span class="payment-pill" [class.due]="(a.balance_due ?? 0) > 0">{{ (a.balance_due ?? 0) > 0 ? ('Due ₹' + (a.balance_due | number:'1.0-0')) : 'Settled' }}</span>
                 </div>

@@ -98,7 +98,7 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
                 <div style="margin-top:4px"><span class="badge" style="background:var(--gold-soft);color:var(--gold)">Top-up pending{{ x.price_paid ? ' · ₹' + (+x.price_paid).toLocaleString('en-IN') : '' }}</span>
                 @if (true) { <select style="width:auto;min-height:30px;padding:2px 26px 2px 8px;margin-left:6px" [(ngModel)]="markVia"><option value="cash">Cash</option><option value="upi">UPI</option><option value="card">Card</option><option value="bank_transfer">Bank</option><option value="other">Other</option></select><button class="s" style="margin-left:6px" (click)="markTopupPaid(c.id, x.id)">Mark paid</button> }</div> }</td>
             @if (auth.isAdmin()) { <td style="white-space:nowrap"><button class="s" (click)="startPlan(p, 'topup')">Top up</button>
-              <button class="s" (click)="startPlan(p, 'edit')">Edit</button><button class="s" style="color:var(--bad,#c33)" (click)="removePlan(c.id, p)">Remove</button></td> }</tr>
+              <button class="s" (click)="startPlan(p, 'edit')">Edit</button><button class="s" (click)="startPlan(p, 'past')">+ Past visits</button><button class="s" style="color:var(--bad,#c33)" (click)="removePlan(c.id, p)">Remove</button></td> }</tr>
           @if (planEdit?.id === p.id) {
             <tr class="detail"><td colspan="8">
               @if (planEdit!.mode === 'topup') {
@@ -111,20 +111,66 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
                   <div><label>Note (optional)</label><input [(ngModel)]="planEdit!.note" placeholder="e.g. paid by UPI"></div>
                 </div>
                 <small>New balance: {{ (+p.balance + +(planEdit!.amount || 0)) | number: '1.2-2' }}</small>
+              } @else if (planEdit!.mode === 'past') {
+                <p style="margin:0 0 6px"><b>Earlier visits on "{{ p.name }}"</b> <small>taken before this app · each lowers the balance ({{ +p.balance }} left)</small></p>
+                @for (x of pastRows; track $index) {
+                  <div class="row" style="align-items:flex-end">
+                    <div style="flex:0 0 160px"><label>Visit date</label><input type="date" [max]="todayStr" [(ngModel)]="x.used_on"></div>
+                    <div style="flex:0 0 120px"><label>{{ p.plan_type === 'hours' ? 'Hours used' : 'Rs used' }}</label><input type="number" min="0.25" step="0.25" [(ngModel)]="x.amount"></div>
+                    <div><label>Service / note</label><input [(ngModel)]="x.note" placeholder="e.g. Swedish massage"></div>
+                    <div style="flex:0 0 auto"><button class="s" (click)="pastRows.splice($index, 1)">✕</button></div>
+                  </div>
+                }
+                <button class="s" (click)="pastRows.push({ used_on: '', amount: null, note: '' })">+ Add another visit</button>
+                <small style="margin-left:8px">Total {{ pastTotal(pastRows) }} · left after {{ +p.balance - pastTotal(pastRows) | number: '1.0-2' }}</small><br>
               } @else {
                 <div class="row">
+                  <div><label>Purchased on</label><input type="date" [max]="todayStr" [(ngModel)]="planEdit!.purchased_on"></div>
                   <div><label>Plan name</label><input [(ngModel)]="planEdit!.name"></div>
                   <div><label>Adjust balance left — lower it to reduce ({{ p.plan_type === 'hours' ? 'hours' : 'Rs' }})</label><input type="number" min="0" step="0.25" [(ngModel)]="planEdit!.balance"></div>
                   <div><label>Expiry date (blank = never)</label><input type="date" [(ngModel)]="planEdit!.expires_on"></div>
                   <div><label>Notes</label><input [(ngModel)]="planEdit!.notes"></div>
                 </div>
               }
-              <button class="p" (click)="savePlan(c.id)">{{ planEdit!.mode === 'topup' ? 'Add top-up' : 'Save plan' }}</button>
+              <button class="p" (click)="planEdit!.mode === 'past' ? savePast(c.id, p.id) : savePlan(c.id)">{{ planEdit!.mode === 'topup' ? 'Add top-up' : planEdit!.mode === 'past' ? 'Save visits' : 'Save plan' }}</button>
               <button class="s" style="margin-left:8px" (click)="planEdit = null">Cancel</button>
             </td></tr>
           }
         } @empty { <tr><td colspan="8">No membership plans yet.</td></tr> }
       </table></div>
+      @if (auth.isAdmin()) {
+        <details class="sec" [open]="oldOpen" (toggle)="oldOpen = $any($event.target).open"><summary>+ Add a membership from old records <small>bought before using the app, with the visits already taken</small></summary>
+          <div class="row">
+            <div style="flex:2"><label>Membership plan</label><select [(ngModel)]="old.package_id">
+              <option [ngValue]="null">Other (type it below)</option>
+              @for (k of packages(); track k.id) { <option [ngValue]="k.id">{{ pkgLabel(k) }}</option> }</select></div>
+            @if (!old.package_id) {
+              <div><label>Name</label><input [(ngModel)]="old.name" placeholder="e.g. Gold 10 hrs"></div>
+              <div style="flex:0 0 110px"><label>Type</label><select [(ngModel)]="old.plan_type"><option value="hours">Hours</option><option value="rupees">Rupees</option></select></div>
+            }
+            <div style="flex:0 0 120px"><label>{{ old.plan_type === 'rupees' && !old.package_id ? 'Rs bought' : 'Hours bought' }}{{ old.package_id ? ' (blank = plan)' : '' }}</label><input type="number" min="0.25" step="0.25" [(ngModel)]="old.purchased_amount"></div>
+          </div>
+          <div class="row">
+            <div><label>Purchased on *</label><input type="date" [max]="todayStr" [(ngModel)]="old.purchased_on"></div>
+            <div><label>Expires on {{ old.package_id ? '(blank = plan validity)' : '(blank = never)' }}</label><input type="date" [(ngModel)]="old.expires_on"></div>
+            <div><label>Price paid (Rs)</label><input type="number" min="0" [(ngModel)]="old.price_paid" [placeholder]="old.package_id ? 'blank = plan price' : ''"></div>
+            <div style="flex:0 0 170px"><label>Payment</label><select [(ngModel)]="old.paid"><option value="cash">Paid · Cash</option><option value="upi">Paid · UPI</option><option value="card">Paid · Card</option><option value="bank_transfer">Paid · Bank</option><option value="other">Paid · Other</option><option value="pending">Pending</option></select></div>
+          </div>
+          <p style="margin:8px 0 4px"><b>Visits already taken</b> <small>add each visit with its date, or just a total below</small></p>
+          @for (x of old.sessions; track $index) {
+            <div class="row" style="align-items:flex-end">
+              <div style="flex:0 0 160px"><label>Visit date</label><input type="date" [max]="todayStr" [(ngModel)]="x.used_on"></div>
+              <div style="flex:0 0 120px"><label>Used</label><input type="number" min="0.25" step="0.25" [(ngModel)]="x.amount"></div>
+              <div><label>Service / note</label><input [(ngModel)]="x.note"></div>
+              <div style="flex:0 0 auto"><button class="s" (click)="old.sessions.splice($index, 1)">✕</button></div>
+            </div>
+          }
+          <button class="s" (click)="old.sessions.push({ used_on: '', amount: null, note: '' })">+ Add a visit</button>
+          <div class="row" style="margin-top:6px"><div style="flex:0 0 220px"><label>Or total used (no dates)</label><input type="number" min="0" step="0.25" [(ngModel)]="old.used_before"></div></div>
+          <small>Used in total: {{ pastTotal(old.sessions) + (+(old.used_before ?? 0) || 0) }}</small><br>
+          <button class="p" (click)="saveOld(c.id)">Save old membership</button>
+        </details>
+      }
       <h4>Assign a membership</h4>
       @if (packages().length) {
         <div class="row" style="align-items:flex-end">
@@ -212,10 +258,11 @@ export class Customers implements OnInit {
       this.planErr.set(false); this.planMsg.set('Plan assigned.'); this.assign = { package_id: null, paid: 'cash' }; await this.open(cid);
     } catch (x) { this.planErr.set(true); this.planMsg.set(errorText(x)); }
   }
-  planEdit: { id: number; mode: 'edit' | 'topup'; plan_type: 'hours' | 'rupees'; name: string; expires_on: string; notes: string; balance: number | null; amount: number | null; price_paid: number | null; paid: string; note: string } | null = null;
-  startPlan(p: { id: number; name: string; plan_type: 'hours' | 'rupees'; expires_on?: string | null; notes?: string | null; balance?: number }, mode: 'edit' | 'topup') {
+  planEdit: { id: number; mode: 'edit' | 'topup' | 'past'; plan_type: 'hours' | 'rupees'; name: string; expires_on: string; notes: string; balance: number | null; purchased_on: string; amount: number | null; price_paid: number | null; paid: string; note: string } | null = null;
+  startPlan(p: { id: number; name: string; plan_type: 'hours' | 'rupees'; expires_on?: string | null; notes?: string | null; balance?: number; created_at?: string }, mode: 'edit' | 'topup' | 'past') {
     this.planMsg.set('');
-    this.planEdit = { id: p.id, mode, plan_type: p.plan_type, name: p.name, expires_on: p.expires_on ?? '', notes: p.notes ?? '', balance: p.balance != null ? +p.balance : null, amount: null, price_paid: null, paid: 'cash', note: '' };
+    this.planEdit = { id: p.id, mode, plan_type: p.plan_type, name: p.name, expires_on: p.expires_on ?? '', notes: p.notes ?? '', balance: p.balance != null ? +p.balance : null, purchased_on: (p.created_at ?? '').slice(0, 10), amount: null, price_paid: null, paid: 'cash', note: '' };
+    if (mode === 'past') this.pastRows = [{ used_on: '', amount: null, note: '' }];
   }
   async markPaid(cid: number, pid: number) {
     if (!(await this.confirm.ask('Mark this membership as paid?', 'Paid by ' + this.markVia, 'Mark paid', false))) return;
@@ -226,6 +273,41 @@ export class Customers implements OnInit {
     if (!(await this.confirm.ask('Mark this top-up as paid?', 'Paid by ' + this.markVia, 'Mark paid', false))) return;
     try { await this.api.put(`/plan-topups/${tid}/paid`, { paid: 'cash' }); this.planErr.set(false); this.planMsg.set('Top-up marked paid.'); await this.open(cid); }
     catch (x) { this.planErr.set(true); this.planMsg.set(errorText(x)); }
+  }
+  todayStr = new Date().toLocaleDateString('sv-SE');
+  oldOpen = false;
+  pastRows: { used_on: string; amount: number | null; note: string }[] = [];
+  blankOld() { return { package_id: null as number | null, name: '', plan_type: 'hours', purchased_amount: null as number | null, purchased_on: '',
+    expires_on: '', price_paid: null as number | null, paid: 'cash', used_before: null as number | null,
+    sessions: [] as { used_on: string; amount: number | null; note: string }[] }; }
+  old = this.blankOld();
+  pastTotal(rows: { amount: number | null }[]) { return Math.round(rows.reduce((t, x) => t + (+(x.amount ?? 0) || 0), 0) * 100) / 100; }
+  private cleanRows(rows: { used_on: string; amount: number | null; note: string }[]) {
+    const ok = rows.filter((x) => x.used_on || x.amount);
+    if (ok.some((x) => !x.used_on || !(+(x.amount ?? 0) > 0))) throw new Error('Each visit needs a date and the amount used.');
+    return ok.map((x) => ({ used_on: x.used_on, amount: +(x.amount ?? 0), note: x.note || null }));
+  }
+  async saveOld(cid: number) {
+    try {
+      const o = this.old; const sessions = this.cleanRows(o.sessions);
+      if (!o.purchased_on) throw new Error('Enter the purchase date.');
+      if (!(await this.confirm.ask('Save this old membership?', `Bought ${o.purchased_on} · ${this.pastTotal(sessions) + (+(o.used_before ?? 0) || 0)} already used`, 'Save'))) return;
+      const r = await this.api.post<{ balance: number }>(`/customers/${cid}/plans/import`, {
+        package_id: o.package_id, name: o.package_id ? null : o.name.trim() || null, plan_type: o.package_id ? null : o.plan_type,
+        purchased_amount: o.purchased_amount ? +o.purchased_amount : null, purchased_on: o.purchased_on, expires_on: o.expires_on || null,
+        price_paid: o.price_paid != null && String(o.price_paid) !== '' ? +o.price_paid : null,
+        payment_method: o.paid === 'pending' ? null : o.paid, used_before: +(o.used_before ?? 0) || 0, sessions });
+      this.planErr.set(false); this.planMsg.set(`Old membership saved · ${r.balance} left.`); this.old = this.blankOld(); this.oldOpen = false; await this.open(cid);
+    } catch (e) { this.planErr.set(true); this.planMsg.set(e instanceof Error && !('status' in e) ? e.message : errorText(e)); }
+  }
+  async savePast(cid: number, pid: number) {
+    try {
+      const sessions = this.cleanRows(this.pastRows);
+      if (!sessions.length) throw new Error('Add at least one visit.');
+      if (!(await this.confirm.ask(`Add ${sessions.length} earlier visit(s)?`, `${this.pastTotal(sessions)} will come off the balance`, 'Add'))) return;
+      const r = await this.api.post<{ balance: number }>(`/customers/${cid}/plans/${pid}/past-sessions`, sessions);
+      this.planErr.set(false); this.planMsg.set(`Visits added · ${r.balance} left.`); this.planEdit = null; await this.open(cid);
+    } catch (e) { this.planErr.set(true); this.planMsg.set(e instanceof Error && !('status' in e) ? e.message : errorText(e)); }
   }
   async removePlan(cid: number, p: { id: number; name: string; balance: number }) {
     if (!(await this.confirm.ask(`Remove membership "${p.name}"?`, `${+p.balance} left will be removed. Used memberships are ended (history kept); this is recorded in the audit log.`, 'Remove', true))) return;
@@ -242,7 +324,7 @@ export class Customers implements OnInit {
           price_paid: e.price_paid === null || String(e.price_paid) === '' ? null : Number(e.price_paid), ...this.payOf(e.paid) });
         this.planMsg.set('Top-up added.');
       } else {
-        await this.api.put(`/customers/${cid}/plans/${e.id}`, { name: e.name.trim(), expires_on: e.expires_on || null, notes: e.notes.trim() || null, ...(e.balance != null && String(e.balance) !== '' ? { balance: Number(e.balance) } : {}) });
+        await this.api.put(`/customers/${cid}/plans/${e.id}`, { name: e.name.trim(), expires_on: e.expires_on || null, notes: e.notes.trim() || null, ...(e.purchased_on ? { purchased_on: e.purchased_on } : {}), ...(e.balance != null && String(e.balance) !== '' ? { balance: Number(e.balance) } : {}) });
         this.planMsg.set('Plan updated.');
       }
       this.planErr.set(false); this.planEdit = null; await this.open(cid);

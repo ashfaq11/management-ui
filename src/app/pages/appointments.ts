@@ -88,7 +88,8 @@ import { Confirm } from '../shared/confirm';
       }
     </div>
     @if (auth.isAdmin()) { <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" style="width:auto" [(ngModel)]="pastEntry">
-      Past visit (enter an earlier appointment from old records — then mark it Completed)</label> }
+      Past visit (enter an earlier appointment from old records)</label>
+      @if (pastEntry && !editId()) { <label style="display:flex;gap:8px;align-items:center;margin:-2px 0 8px 26px"><input type="checkbox" style="width:auto" [(ngModel)]="pastDone"> Save it as Completed</label> } }
     <app-when-picker [(value)]="f.start_at" [(selectionValid)]="slotValid"
       [therapistId]="f.therapist_id" [durationMin]="duration()" [excludeId]="editId()" [allowPast]="pastEntry" />
     <button class="p" style="margin-top:10px" [disabled]="!slotValid" (click)="save()">{{ editId() ? "Save changes" : "Book" }}</button>
@@ -477,8 +478,10 @@ export class Appointments implements OnInit {
       const r = id ? await this.api.put(`/appointments/${id}`, body)
         : await this.api.post<{ plan_deduction?: { amount: number; unit: string; plan_name: string; remaining_balance: number } | null }>('/appointments', body);
       const d = (r as { plan_deduction?: { amount: number; unit: string; plan_name: string; remaining_balance: number } | null })?.plan_deduction;
+      const newId = (r as { id?: number })?.id;
+      if (!id && newId && this.pastEntry && this.pastDone) await this.api.patch(`/appointments/${newId}/status`, { status: 'completed' });
       this.bookPlan = null; this.bookHours = null;
-      this.say(id ? 'Saved' : d ? `Booked · ${d.amount} ${d.unit} taken from ${d.plan_name} (left ${d.remaining_balance})` : 'Booked'); this.day.set(this.f.start_at.slice(0, 10));
+      this.say(id ? 'Saved' : (this.pastEntry && this.pastDone ? 'Completed past visit. ' : '') + (d ? `Booked · ${d.amount} ${d.unit} taken from ${d.plan_name} (left ${d.remaining_balance})` : 'Booked')); this.day.set(this.f.start_at.slice(0, 10));
       this.cancelEdit(); await this.load();
     } catch (e) { this.say(errorText(e), true); }
   }
@@ -564,7 +567,7 @@ export class Appointments implements OnInit {
 
   deductHours: number | null = null;
   hoursNeeded(a: Appointment) { return Math.round((Number(a.duration_min) / 60) * 100) / 100; }
-  pastEntry = false;
+  pastEntry = false; pastDone = true;
   discType: 'none' | 'amount' | 'percent' = 'none'; discValue: number | null = null;
   listPrice() { const v = this.f.price; return v !== null && String(v) !== '' ? Number(v) : Number(this.services().find((x) => x.id === this.f.service_id)?.price ?? 0); }
   finalPrice() {

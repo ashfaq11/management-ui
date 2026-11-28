@@ -1,3 +1,4 @@
+import { DtPipe } from '../shared/dt.pipe';
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -12,7 +13,7 @@ interface Month { total: number; lines: Line[]; by_category: { category: string;
 import { exportTable } from '../shared/export';
 import { Confirm } from '../shared/confirm';
 @Component({
-  selector: 'app-expenses', imports: [FormsModule, DecimalPipe],
+  selector: 'app-expenses', imports: [DtPipe, FormsModule, DecimalPipe],
   template: `
   <div class="page-head"><div><h1>Expenses</h1><p>Spa running costs. They reduce net profit in Reports.</p></div></div>
 
@@ -55,7 +56,7 @@ import { Confirm } from '../shared/confirm';
       <div class="wrap"><table><tr><th>Name</th><th>Type</th><th class="num">Monthly</th><th>Due day</th><th>From</th><th>Until</th><th></th></tr>
         @for (r of data()?.regular ?? []; track r.id) {
           <tr><td>{{ r.name }}</td><td>{{ r.category }}</td><td class="num">{{ r.amount | number: '1.2-2' }}</td><td>{{ r.day_of_month }}</td>
-            <td>{{ r.starts_on }}</td><td>{{ r.ends_on || 'Ongoing' }}</td>
+            <td>{{ r.starts_on | dt }}</td><td>{{ (r.ends_on | dt) || 'Ongoing' }}</td>
             <td style="white-space:nowrap"><button class="s" (click)="editR(r)">Edit</button>
               @if (!r.ends_on) { <button class="s" (click)="stopR(r)">Stop</button> }</td></tr>
         } @empty { <tr><td colspan="7">None yet.</td></tr> }

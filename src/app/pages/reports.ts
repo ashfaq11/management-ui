@@ -1,3 +1,4 @@
+import { DtPipe, fmtDt } from '../shared/dt.pipe';
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -42,7 +43,7 @@ interface ShiftReport {
 }
 
 @Component({
-  selector: 'app-reports', imports: [DurationPipe, FormsModule, DecimalPipe, Insights, ClosingSummary],
+  selector: 'app-reports', imports: [DtPipe, DurationPipe, FormsModule, DecimalPipe, Insights, ClosingSummary],
   template: `
   <nav class="rtabs">@for (g of groups; track g.name) { <button [class.on]="group().name === g.name" (click)="tab = g.tabs[0][0]">{{ g.name }}</button> }</nav>
   <nav class="rsub">@for (t of group().tabs; track t[0]) { <button [class.on]="tab === t[0]" (click)="tab = t[0]">{{ t[1] }}</button> }</nav>
@@ -213,7 +214,7 @@ interface ShiftReport {
           <td class="num">{{ x.plan_type === 'hours' ? (x.purchased_amount | number: '1.2-2') + ' hrs' : ('Rs ' + (x.purchased_amount | number: '1.2-2')) }}</td>
           <td class="num">{{ x.plan_type === 'hours' ? (x.used_amount | number: '1.2-2') + ' hrs' : ('Rs ' + (x.used_amount | number: '1.2-2')) }}</td>
           <td class="num"><strong>{{ x.plan_type === 'hours' ? (x.balance | number: '1.2-2') + ' hrs' : ('Rs ' + (x.balance | number: '1.2-2')) }}</strong></td>
-          <td>{{ x.expires_on || 'Never' }}</td></tr>
+          <td>{{ (x.expires_on | dt) || 'Never' }}</td></tr>
       } @empty { <tr><td colspan="7">No plans were added in this period.</td></tr> }
     </table></div>
 
@@ -360,10 +361,7 @@ export class Reports implements OnInit {
   }
 
   /** "2026-11-12T09:00" -> "12 Nov, 09:00" (already the spa's local time). */
-  when(v: string): string {
-    const d = new Date(v.slice(0, 16) + ':00');
-    return isNaN(+d) ? v : d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
-  }
+  when(v: string): string { return fmtDt(v); }
   /** 90 -> '1 h 30 min' */
   hrs(m?: number) { m = Math.round(+(m ?? 0)); const h = Math.floor(m / 60); return (h ? h + ' h ' : '') + (m % 60 || !h ? (m % 60) + ' min' : '').trim(); }
   /** -5900 -> '−₹5,900' (Indian grouping, sign before the symbol). */

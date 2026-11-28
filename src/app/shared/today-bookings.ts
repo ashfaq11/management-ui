@@ -1,3 +1,4 @@
+import { DtPipe } from './dt.pipe';
 import { Wa } from './wa';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -15,7 +16,7 @@ const PAY: Record<string, [string, string]> = {
 
 /** Dashboard: today's bookings as a table; a row opens a detail popup with the customer, money and quick actions. */
 @Component({
-  selector: 'app-today-bookings', imports: [RouterLink, DurationPipe],
+  selector: 'app-today-bookings', imports: [DtPipe, RouterLink, DurationPipe],
   styles: [`
     tr.trow{cursor:pointer}tr.trow:hover td{background:var(--acc-soft)}
     tr.now td{box-shadow:inset 3px 0 0 var(--ok)}
@@ -44,7 +45,7 @@ const PAY: Record<string, [string, string]> = {
       <tr><th>Time</th><th>Customer</th><th>Service</th><th>Duration</th><th>Therapist</th><th>Status</th><th>Payment</th><th class="num">Due</th><th></th></tr>
       @for (a of rows(); track a.id) {
         <tr class="trow" [class.now]="isNow(a)" (click)="open(a)">
-          <td><b>{{ a.start_at.slice(11, 16) }}</b></td><td>{{ a.customer }}</td><td>{{ a.service }}</td>
+          <td><b>{{ a.start_at | dt: 't' }}</b></td><td>{{ a.customer }}</td><td>{{ a.service }}</td>
           <td>{{ a.duration_min | dur }}</td><td>{{ a.therapist }}</td>
           <td><span class="pill" [class]="'pill ' + st(a)[1]">{{ st(a)[0] }}</span></td>
           <td><span class="pill" [class]="'pill ' + py(a)[1]">{{ py(a)[0] }}</span></td>
@@ -64,7 +65,7 @@ const PAY: Record<string, [string, string]> = {
         <div class="grid">
           <div><span>Service</span><b>{{ a.service }}</b></div>
           <div><span>Therapist</span><b>{{ a.therapist }}</b></div>
-          <div><span>Time</span><b>{{ a.start_at.slice(11, 16) }} – {{ endTime(a) }}</b></div>
+          <div><span>Time</span><b>{{ a.start_at | dt: 't' }} – {{ endTime(a) }}</b></div>
           <div><span>Duration</span><b>{{ a.duration_min | dur }}</b></div>
           <div><span>Price</span><b>₹{{ (+a.price).toLocaleString('en-IN') }}</b></div>
           <div><span>Paid / due</span><b>₹{{ (+(a.paid_amount || 0)).toLocaleString('en-IN') }} / ₹{{ (+(a.balance_due || 0)).toLocaleString('en-IN') }}</b></div>

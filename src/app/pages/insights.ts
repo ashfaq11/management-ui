@@ -1,3 +1,4 @@
+import { fmtDt } from '../shared/dt.pipe';
 import { Component, Input, OnChanges, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, errorText } from '../core/api';
@@ -21,7 +22,7 @@ interface Insight { title: string; columns: string[]; rows: (string | number | n
     @if (err()) { <div class="msg err">{{ err() }}</div> }
     @if (data(); as d) {
       <h2 style="margin-top:12px">{{ d.title }} <small style="color:var(--mut);font-weight:500">{{ d.rows.length }} rows</small></h2>
-      <div class="wrap"><table><tr>@for (c of d.columns; track $index) { <th class="sort" [class.num]="isNum(d, $index)" (click)="sortBy($index)">{{ c }}{{ sortCol() === $index ? (sortAsc() ? ' ▲' : ' ▼') : '' }}</th> }</tr>
+      <div class="wrap"><table class="plain"><tr>@for (c of d.columns; track $index) { <th class="sort" [class.num]="isNum(d, $index)" (click)="sortBy($index)">{{ c }}{{ sortCol() === $index ? (sortAsc() ? ' ▲' : ' ▼') : '' }}</th> }</tr>
         @for (r of sorted(); track $index) {
           <tr>@for (v of r; track $index) { <td [class.num]="typeof(v) === 'number'">{{ show(v) }}</td> }</tr>
         } @empty { <tr><td [attr.colspan]="d.columns.length">Nothing to show for this period.</td></tr> }
@@ -50,7 +51,7 @@ export class Insights implements OnChanges {
   });
   ngOnChanges() { this.sortCol.set(null); void this.load(); }
   isNum(d: Insight, i: number) { return d.rows.some((r) => typeof r[i] === 'number'); }
-  show(v: unknown) { return typeof v === 'number' ? v.toLocaleString('en-IN', { maximumFractionDigits: 2 }) : v ?? '—'; }
+  show(v: unknown) { return typeof v === 'number' ? v.toLocaleString('en-IN', { maximumFractionDigits: 2 }) : typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? fmtDt(v) : v ?? '—'; }
   private q() { return { month: this.month, days: this.days }; }
   async load() {
     try { this.data.set(await this.api.get<Insight>(`/reports/insights/${this.kind}`, this.q())); this.err.set(''); }

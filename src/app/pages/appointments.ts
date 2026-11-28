@@ -1,3 +1,4 @@
+import { DtPipe } from '../shared/dt.pipe';
 import { Wa } from '../shared/wa';
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, OnInit, inject, signal } from '@angular/core';
@@ -13,7 +14,7 @@ import { today } from '../core/util';
 
 import { Confirm } from '../shared/confirm';
 @Component({
-  selector: 'app-appointments', imports: [DayBoard, DurationPipe, SearchSelect, FormsModule, DecimalPipe, WhenPicker],
+  selector: 'app-appointments', imports: [DtPipe, DayBoard, DurationPipe, SearchSelect, FormsModule, DecimalPipe, WhenPicker],
   styles: [`
     .cal-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
     .cal-toolbar .spacer{flex:1}
@@ -126,7 +127,7 @@ import { Confirm } from '../shared/confirm';
         </div>
         @if ((pending.paid_amount ?? 0) > 0) { <small class="shift-warn">A payment has already been recorded for this appointment. Refund it before using a membership plan.</small> }
         @for (p of unpaidPlans(); track p.id) { <small class="shift-warn" style="display:block">⚠ {{ p.name }}: membership payment is still pending — collect it first.</small> }
-        @for (p of expiredPlans(); track p.id) { <small class="shift-warn" style="display:block">⚠ {{ p.name }} expired on {{ p.expires_on }} ({{ p.balance }} left, can't be used).</small> }
+        @for (p of expiredPlans(); track p.id) { <small class="shift-warn" style="display:block">⚠ {{ p.name }} expired on {{ p.expires_on | dt }} ({{ p.balance }} left, can't be used).</small> }
         <small>The oldest eligible plan with enough balance will be used. Balances are not mixed between hours and rupees.</small>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
           @if (!planOnly()) { <button class="s" (click)="completeWith(null)">Complete without plan deduction</button> }
@@ -182,7 +183,7 @@ import { Confirm } from '../shared/confirm';
             (click)="selectDay(d)">
             <div class="cal-date"><span>{{ dayNumber(d) }}</span><span>{{ appointmentsFor(d).length || '' }}</span></div>
             @for (a of appointmentsFor(d).slice(0,3); track a.id) {
-              <span class="cal-item">{{ a.start_at.slice(11,16) }} {{ a.customer }}</span>
+              <span class="cal-item">{{ a.start_at | dt: 't' }} {{ a.customer }}</span>
             }
             @if (appointmentsFor(d).length > 3) { <small>+{{ appointmentsFor(d).length-3 }} more</small> }
           </div>
@@ -194,7 +195,7 @@ import { Confirm } from '../shared/confirm';
           <section [class.open]="d === day()">
             <h4><button class="link" (click)="selectDay(d)">{{ weekday(d) }} · {{ dayNumber(d) }}</button></h4>
             @for (a of appointmentsFor(d); track a.id) {
-              <div class="cal-item" [title]="a.customer + ' / ' + a.service">{{ a.start_at.slice(11,16) }} · {{ a.customer }}<small>{{ a.therapist }}</small></div>
+              <div class="cal-item" [title]="a.customer + ' / ' + a.service">{{ a.start_at | dt: 't' }} · {{ a.customer }}<small>{{ a.therapist }}</small></div>
             } @empty { <small>No bookings · <a href="" (click)="$event.preventDefault(); scrollTop()">+ Book one</a></small> }
           </section>
         }
@@ -206,7 +207,7 @@ import { Confirm } from '../shared/confirm';
         @if (rows().length) {
           <table><tr><th>Time</th><th>Customer</th><th>Therapist</th><th>Service</th><th>Duration</th><th class="num">Price</th><th class="num">Paid</th><th class="num">Due</th><th>Payment status</th><th>Appointment status</th><th>Actions</th></tr>
           @for (a of rows(); track a.id) {
-            <tr [id]="'appt-' + a.id"><td>{{ a.start_at.slice(11,16) }}</td><td>{{ a.customer }}<br><small>{{ a.phone }}</small></td>
+            <tr [id]="'appt-' + a.id"><td>{{ a.start_at | dt: 't' }}</td><td>{{ a.customer }}<br><small>{{ a.phone }}</small></td>
               <td>{{ a.therapist }}</td><td>{{ a.service }}</td><td>{{ a.duration_min | dur }}</td><td class="num">{{ a.price | number:'1.2-2' }}</td>
               <td class="num">{{ a.paid_amount || 0 | number:'1.2-2' }}</td><td class="num"><strong>{{ a.balance_due || 0 | number:'1.2-2' }}</strong></td>
               <td><span class="pay-state" [class.pay-pending]="paymentState(a)==='pending'"

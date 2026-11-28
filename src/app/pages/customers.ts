@@ -1,3 +1,4 @@
+import { DtPipe, fmtDt } from '../shared/dt.pipe';
 import { Wa } from '../shared/wa';
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
@@ -15,7 +16,7 @@ import { Confirm } from '../shared/confirm';
 import { exportTable } from '../shared/export';
 type Hist = { id: number; created_at: string; plan: string; service: string; amount: number; unit: string; covered: number | null; reversed_at: string | null; done_by: string | null };
 @Component({
-  selector: 'app-customers', imports: [RouterLink, DurationPipe, FormsModule, DecimalPipe],
+  selector: 'app-customers', imports: [DtPipe, RouterLink, DurationPipe, FormsModule, DecimalPipe],
   styles: [`
     .customer-list{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
     .customer-pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;flex-wrap:wrap}
@@ -33,7 +34,7 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
     <div class="wrap"><table><tr><th>Name</th><th>Phone</th><th>Membership left</th><th>Since</th><th></th></tr>
     @for (c of list(); track c.id) {
       <tr><td>{{ c.name }}</td><td>{{ c.phone }}</td><td>@if ($any(c).hours_left || $any(c).rupees_left) { <button class="s" title="View / edit membership" (click)="openPlans(c.id)">
-          {{ $any(c).hours_left ? (+$any(c).hours_left) + ' hrs' : '' }}{{ $any(c).hours_left && $any(c).rupees_left ? ' · ' : '' }}{{ $any(c).rupees_left ? '₹' + (+$any(c).rupees_left) : '' }}</button> } @else { <small>—</small> }</td><td>{{ c.created_at.slice(0, 10) }}</td>
+          {{ $any(c).hours_left ? (+$any(c).hours_left) + ' hrs' : '' }}{{ $any(c).hours_left && $any(c).rupees_left ? ' · ' : '' }}{{ $any(c).rupees_left ? '₹' + (+$any(c).rupees_left) : '' }}</button> } @else { <small>—</small> }</td><td>{{ c.created_at | dt: 'd' }}</td>
         <td style="white-space:nowrap"><button class="s" (click)="open(c.id)">History</button>
           <button class="s" (click)="editFromList(c.id)">Edit</button>
           @if (c.phone) { <a [href]="wa(c.phone, c.name)" target="_blank" rel="noopener"><button class="s" title="WhatsApp">WhatsApp</button></a> }</td></tr>
@@ -72,7 +73,7 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
           <div class="profile-fact"><span>Phone</span><strong>{{ c.phone }}</strong></div>
           <div class="profile-fact"><span>Email</span><strong>{{ c.email || '—' }}</strong></div>
           <div class="profile-fact"><span>Preferred payment</span><strong>{{ methodName(c.preferred_payment_method) }}</strong></div>
-          <div class="profile-fact"><span>Customer since</span><strong>{{ c.created_at.slice(0,10) }}</strong></div>
+          <div class="profile-fact"><span>Customer since</span><strong>{{ c.created_at | dt: 'd' }}</strong></div>
         </div>
         @if (c.notes) { <p>{{ c.notes }}</p> }
       }
@@ -87,7 +88,7 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
           <tr><td>{{ p.name }}</td><td>{{ p.plan_type === 'hours' ? 'Hours' : 'Rupees' }}</td>
             <td>{{ p.purchased_amount | number: '1.2-2' }}</td>
             <td>{{ p.used_amount | number: '1.2-2' }}</td>
-            <td><strong>{{ p.balance | number: '1.2-2' }}</strong></td><td>{{ p.expires_on || 'Never' }}</td>
+            <td><strong>{{ p.balance | number: '1.2-2' }}</strong></td><td>{{ (p.expires_on | dt) || 'Never' }}</td>
             <td>{{ planStatus(p) }}@if (+p.balance > 0 && ((p.plan_type === 'hours' && +p.balance <= 2) || +p.balance / +p.purchased_amount <= 0.2)) {
               <span class="badge" style="background:var(--gold-soft);color:var(--gold);margin-left:4px">Low</span> }</td>
             <td>@if (p.paid_at) { <span class="badge" style="background:var(--ok-soft);color:var(--ok)">Paid</span> }
@@ -140,7 +141,7 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
         @if (hist()?.length) { <button class="s" (click)="exportHist(c.name, 'pdf')">PDF</button><button class="s" (click)="exportHist(c.name, 'xlsx')">Excel</button> }</h3>
       @if (hist(); as h) {
         <div class="wrap"><table><tr><th>Date</th><th>Plan</th><th>Service</th><th class="num">Used</th><th>Status</th><th>By</th></tr>
-          @for (r of h; track r.id) { <tr><td>{{ r.created_at.slice(0, 16).replace('T', ' ') }}</td><td>{{ r.plan }}</td><td>{{ r.service }}</td>
+          @for (r of h; track r.id) { <tr><td>{{ r.created_at | dt }}</td><td>{{ r.plan }}</td><td>{{ r.service }}</td>
             <td class="num">{{ r.unit === 'hours' ? r.amount + ' hrs' : '₹' + r.amount }}</td><td>{{ r.reversed_at ? 'Returned' : r.covered != null ? 'Part-paid' : 'Used' }}</td><td>{{ r.done_by || '—' }}</td></tr>
           } @empty { <tr><td colspan="6">No deductions yet.</td></tr> }</table></div>
       }
@@ -175,7 +176,7 @@ type Hist = { id: number; created_at: string; plan: string; service: string; amo
       <p style="margin:8px 0;color:var(--mut)">{{ rows.length }} visit(s) &middot; completed total Rs {{ spent(rows) | number: '1.2-2' }}</p>
       <div class="wrap"><table><tr><th>When</th><th>Service</th><th>Duration</th><th>Therapist</th><th class="num">Price</th><th>Appointment</th><th>Payment</th><th>Plan deduction</th></tr>
       @for (a of rows; track a.id) {
-        <tr><td>{{ a.start_at.replace('T', ' ') }}</td><td>{{ a.service }}</td><td>{{ a.duration_min | dur }}</td><td>{{ a.therapist }}</td>
+        <tr><td>{{ a.start_at | dt }}</td><td>{{ a.service }}</td><td>{{ a.duration_min | dur }}</td><td>{{ a.therapist }}</td>
           <td class="num">{{ a.price | number: '1.2-2' }}</td><td><span class="badge">{{ a.status }}</span></td>
           <td><span class="badge">{{ paymentLabel(a) }}</span></td>
           <td>@if (a.plan_deducted != null && a.plan_unit) {
@@ -273,10 +274,7 @@ export class Customers implements OnInit {
   spent(rows: { status: string; price: number }[]) {
     return rows.filter((a) => a.status === 'completed').reduce((s, a) => s + Number(a.price), 0);
   }
-  when(v: string): string {
-    const d = new Date(v);
-    return isNaN(+d) ? v : d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
-  }
+  when(v: string): string { return fmtDt(v); }
   availableBalance(c: Customer, type: 'hours' | 'rupees') {
     const currentDate = today();
     return (c.plans ?? []).filter((p) => p.plan_type === type && Number(p.balance) > 0

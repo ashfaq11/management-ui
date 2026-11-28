@@ -1,3 +1,4 @@
+import { DtPipe } from '../shared/dt.pipe';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -9,7 +10,7 @@ import { today } from '../core/util';
 import { exportTable } from '../shared/export';
 import { Confirm } from '../shared/confirm';
 @Component({
-  selector: 'app-payments', imports: [FormsModule, DecimalPipe, DatePipe],
+  selector: 'app-payments', imports: [DtPipe, FormsModule, DecimalPipe, DatePipe],
   styles: [`
     .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
     .settle{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--card)}
@@ -49,7 +50,7 @@ import { Confirm } from '../shared/confirm';
           </td>
           <td>{{ p.received_at | date:'shortTime' }}</td>
           <td>{{ p.customer }}<br><small>{{ p.phone }}</small></td>
-          <td>#{{ p.appointment_id }} · {{ p.start_at.replace('T',' ') }}</td>
+          <td>#{{ p.appointment_id }} · {{ p.start_at | dt }}</td>
           <td>{{ methodName(p.method) }}</td>
           <td class="num"><strong>{{ p.event_type === 'refund' ? '− ' : '' }}{{ p.amount | number:'1.2-2' }}</strong></td>
           <td>{{ p.reference || p.note || '—' }}</td>

@@ -1,10 +1,11 @@
+import { DtPipe } from './dt.pipe';
 import { Component, computed, input, output } from '@angular/core';
 
 interface Appt { id: number; start_at: string; duration_min: number; customer: string; service: string; therapist: string; therapist_id: number; status: string; }
 
 /** One day as a grid: a column per therapist, 9:00–21:00, each booking drawn at its time and length. */
 @Component({
-  selector: 'app-day-board',
+  selector: 'app-day-board', imports: [DtPipe],
   styles: [`
     .board{display:grid;overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
     .col{position:relative;border-left:1px solid var(--line);min-width:150px}
@@ -25,7 +26,7 @@ interface Appt { id: number; start_at: string; duration_min: number; customer: s
         @for (a of c.items; track a.id) {
           <div class="b" [class]="'b ' + a.status" [style.top.px]="34 + top(a)" [style.height.px]="height(a)" (click)="pick.emit(a.id)"
             [title]="a.customer + ' · ' + a.service">
-            <b>{{ a.start_at.slice(11, 16) }} {{ a.customer }}</b>{{ a.service }} · {{ a.duration_min }} min</div>
+            <b>{{ a.start_at | dt: 't' }} {{ a.customer }}</b>{{ a.service }} · {{ a.duration_min }} min</div>
         }
       </div>
     } @empty { <p class="hint" style="padding:12px">No therapists.</p> }

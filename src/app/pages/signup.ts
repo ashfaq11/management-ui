@@ -14,7 +14,9 @@ import { SpaProfileForm, blankProfile, profileBody, profileMissing } from '../sh
     @if (closed()) { <div class="msg err">Sign-up is closed right now. Please contact us.</div> }
     <label>Spa name *</label><input name="s" [(ngModel)]="f.spa_name" placeholder="e.g. Lotus Wellness">
     <label>Your username *</label><input name="u" [(ngModel)]="f.username" autocomplete="username">
-    <label>Password * (8+ characters)</label><input name="p" type="password" [(ngModel)]="f.password" autocomplete="new-password">
+    <label>Password * (8+ characters, letters and numbers)</label><input name="p" type="password" [(ngModel)]="f.password" autocomplete="new-password">
+    <label>Repeat password *</label><input name="p2" type="password" [(ngModel)]="password2" autocomplete="new-password">
+    @if (password2 && password2 !== f.password) { <small style="color:var(--bad,#c33)">Passwords do not match</small> }
     <h3 style="margin-top:14px">Spa details</h3>
     <app-spa-profile-form [(profile)]="prof" />
     <button class="p" [disabled]="busy() || closed()">Create my spa</button>
@@ -24,7 +26,7 @@ import { SpaProfileForm, blankProfile, profileBody, profileMissing } from '../sh
 })
 export class Signup implements OnInit {
   private auth = inject(Auth); private api = inject(Api); private router = inject(Router);
-  f = { spa_name: '', username: '', password: '' };
+  f = { spa_name: '', username: '', password: '' }; password2 = '';
   prof = blankProfile();
   busy = signal(false); error = signal(''); days = signal(30); closed = signal(false);
   async ngOnInit() {
@@ -34,6 +36,9 @@ export class Signup implements OnInit {
   async go() {
     const miss = profileMissing(this.prof);
     if (miss.length) { this.error.set('Please fill: ' + miss.join(', ')); return; }
+    if (this.f.password.length < 8 || !/[A-Za-z]/.test(this.f.password) || !/\d/.test(this.f.password)) {
+      this.error.set('Password needs at least 8 characters with letters and numbers.'); return; }
+    if (this.f.password !== this.password2) { this.error.set('The two passwords do not match.'); return; }
     this.busy.set(true); this.error.set('');
     try {
       await this.auth.register({ ...this.f, ...profileBody(this.prof) });

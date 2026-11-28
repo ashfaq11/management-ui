@@ -44,7 +44,7 @@ import { Confirm } from '../shared/confirm';
       <div><label>Therapist *</label><app-search-select [options]="tOpts()" [(value)]="therapist_id" placeholder="Search therapist…" /></div>
       <div><label>Service</label><select [(ngModel)]="service_id">
         <option [ngValue]="undefined">Choose a service</option>
-        @for (s of services(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select></div>
+        @for (s of services(); track s.id) { <option [ngValue]="s.id">{{ s.name }} · {{ s.duration_min }} min</option> }</select></div>
       <div><label>Duration (min) &middot; blank = service default {{ serviceMinutes() }}</label>
         <input type="number" min="5" max="720" step="5" [(ngModel)]="duration_min" [placeholder]="'' + serviceMinutes()">
         <div class="chips">@for (m of [30, 60, 90, 120]; track m) {<button type="button" [class.on]="duration_min === m" (click)="duration_min = m">{{ m }} min</button>}</div></div>

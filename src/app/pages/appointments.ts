@@ -54,7 +54,7 @@ import { Confirm } from '../shared/confirm';
       </div>
       <div><label>Therapist</label><app-search-select [options]="tOpts()" [(value)]="f.therapist_id" placeholder="Search therapist…" /></div>
       <div><label>Service</label><select [(ngModel)]="f.service_id">
-        @for (s of services(); track s.id) { <option [ngValue]="s.id">{{ s.name }} (Rs {{ s.price }})</option> }</select></div>
+        @for (s of services(); track s.id) { <option [ngValue]="s.id">{{ s.name }} · {{ s.duration_min }} min · ₹{{ s.price }}</option> }</select></div>
       <div><label>{{ editId() ? "Price (blank = keep, or list price if service changed)" : "Price override (optional)" }}</label><input type="number" min="0" [(ngModel)]="f.price"></div>
       <div><label>Duration (min) &middot; blank = {{ editId() ? "keep" : "service default " + serviceMinutes() }}</label>
         <input type="number" min="5" max="720" step="5" [(ngModel)]="f.duration_min" (ngModelChange)="bookHours = null"

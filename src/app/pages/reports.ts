@@ -75,7 +75,7 @@ interface ShiftReport {
     <div><label>Service</label>
       <select [ngModel]="serviceId" (ngModelChange)="serviceId = $event; load()">
         <option [ngValue]="null">All services</option>
-        @for (x of services(); track x.id) { <option [ngValue]="x.id">{{ x.name }}</option> }
+        @for (x of services(); track x.id) { <option [ngValue]="x.id">{{ x.name }} · {{ x.duration_min }} min</option> }
       </select></div>
     <div><label>Payment type</label>
       <select [ngModel]="method" (ngModelChange)="method = $event; load()">
